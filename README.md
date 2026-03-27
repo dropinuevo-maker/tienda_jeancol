@@ -1,11 +1,17 @@
-<div align="center">
+# JeanCol - E-commerce Colombia
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Tienda online moderna construida con React 19, Tailwind CSS 4 y Supabase.
 
-  <h1>Built with AI Studio</h2>
+## Características
+- Carrito persistente
+- Panel de administración completo
+- Integración con WhatsApp Business
+- Generación de descripciones con IA (Gemini)
+- SEO optimizado
+- Internacionalización
 
-  <p>The fastest path from prompt to production with Gemini.</p>
-
-  <a href="https://aistudio.google.com/apps">Start building</a>
-
-</div>
+## Configuración
+Copia `.env.example` a `.env.local` y completa las variables:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `GEMINI_API_KEY`
