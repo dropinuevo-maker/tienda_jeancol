@@ -201,14 +201,7 @@ export const Header = () => {
                     <span className="text-xs font-black text-zinc-900 dark:text-white">{profile.name?.substring(0, 2).toUpperCase() || 'U'}</span>
                   )}
                 </Link>
-              ) : (
-                <Link 
-                  to="/login"
-                  className="px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all"
-                >
-                  Entrar
-                </Link>
-              )}
+              ) : null}
             </div>
 
             <Link 
@@ -290,14 +283,7 @@ export const Header = () => {
                       >
                         <X className="w-4 h-4" />
                       </button>
-                    )}
-                  </form>
-                  <button 
-                    onClick={() => setIsSearchOpen(false)}
-                    className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-primary transition-all"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-10">
@@ -482,42 +468,6 @@ export const Header = () => {
                 ))}
 
                 <div className="pt-8 pb-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-400 px-4 mb-4">Mi Cuenta</p>
-                  {profile ? (
-                    <div className="space-y-2">
-                      <Link 
-                        to={profile.role === 'admin' ? '/admin' : '/profile'}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center gap-4 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800"
-                      >
-                        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-black text-xs">
-                          {profile.name?.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-black text-zinc-900 dark:text-white truncate">{profile.name}</p>
-                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">{profile.role === 'admin' ? 'Administrador' : 'Cliente'}</p>
-                        </div>
-                      </Link>
-                      <button 
-                        onClick={() => {
-                          signOut();
-                          setIsMobileMenuOpen(false);
-                          navigate('/');
-                        }}
-                        className="w-full p-4 rounded-xl bg-red-50 dark:bg-red-950/20 text-red-500 text-xs font-black uppercase tracking-widest text-center border border-red-100 dark:border-red-900/30"
-                      >
-                        Cerrar Sesión
-                      </button>
-                    </div>
-                  ) : (
-                    <Link 
-                      to="/login"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center justify-center p-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-black uppercase tracking-widest shadow-xl shadow-black/10"
-                    >
-                      Iniciar Sesión
-                    </Link>
-                  )}
                 </div>
               </div>
 
