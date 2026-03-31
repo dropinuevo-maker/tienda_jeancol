@@ -100,7 +100,7 @@ export const Header = () => {
   const navItems = [
     { id: 'home', label: 'Inicio', path: '/' },
     { id: 'products', label: 'Productos', path: '/products' },
-    { id: 'categories', label: 'Categorías', path: '/categories' },
+    { id: 'categories', label: 'Categoras', path: '/categories' },
     { id: 'offers', label: 'Ofertas', path: '/offers' }
   ];
 
@@ -477,7 +477,7 @@ export const Header = () => {
                   className="w-full h-12 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-widest text-zinc-900 dark:text-white shadow-sm"
                 >
                   {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                  Modo {theme === 'light' ? 'Noche' : 'Día'}
+                  Modo {theme === 'light' ? 'Noche' : 'Da'}
                 </button>
                 
                 <div className="flex justify-center gap-6">
@@ -487,7 +487,7 @@ export const Header = () => {
                 </div>
 
                 <p className="text-center text-[8px] font-black uppercase tracking-[0.4em] text-zinc-300 dark:text-zinc-700">
-                  {config.name} © {new Date().getFullYear()}
+                  {config.name}  {new Date().getFullYear()}
                 </p>
               </div>
             </motion.div>
