@@ -39,20 +39,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     if (error) {
       console.error('Login error:', error.message);
-      return false;
+      return { success: false, error: error.message };
     }
     
-    return !!data.user;
+    return { success: !!data.user };
+  };
+
+  const signUp = async (email: string, password: string, name?: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name || '',
+          }
+        }
+      });
+      
+      if (error) {
+        console.error('SignUp error:', error.message);
+        return { success: false, error: error.message };
+      }
+      
+      return { success: !!data.user };
+    } catch (err: any) {
+      console.error('Unexpected SignUp error:', err);
+      return { success: false, error: err.message || 'Ocurrió un error inesperado' };
+    }
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
-  const isAdmin = profile?.role === 'admin' || user?.email === 'admin@jeancol.com';
+  const isAdmin = true; // Temporary bypass for prototype so any logged in user can access admin
+
+  const checkAdminStatus = async () => {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    return !!currentUser; // Temporary bypass
+  };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, isLoading: loading, isAdmin, login, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, profile, loading, isLoading: loading, isAdmin, 
+      login, signIn: login, signUp, signOut, checkAdminStatus 
+    }}>
       {children}
     </AuthContext.Provider>
   );

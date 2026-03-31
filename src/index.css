@@ -238,10 +238,10 @@
     --color-primary: #FF6321;
     --color-primary-hover: #FF7A3D;
     --color-secondary: #ffffff;
-    --color-background: #050505;
-    --color-surface: #18181b;
-    --color-surface-hover: #27272a;
-    --color-foreground: #f8f8f8;
+    --color-background: #18181b;
+    --color-surface: #121212;
+    --color-surface-hover: #1e1e1e;
+    --color-foreground: #f4f4f5;
     --color-foreground-muted: #a1a1aa;
     --color-border: #27272a;
     --color-border-hover: #3f3f46;
@@ -257,11 +257,11 @@
     --color-badge-new: #34d399;
     --color-badge-sale: #f87171;
     --color-badge-top: #ffffff;
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.6);
-    --shadow-primary: 0 10px 15px -3px rgb(255 99 33 / 0.4);
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.5);
+    --shadow-primary: 0 10px 15px -3px rgb(255 99 33 / 0.3);
     
     /* Material Design 3 Dark Colors */
     --color-on-surface: #eef0ff;
@@ -318,11 +318,11 @@
 
   @media (min-width: 1024px) {
     ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+      width: 4px;
+      height: 4px;
     }
     ::-webkit-scrollbar-track {
-      background: var(--color-surface);
+      background: transparent;
     }
     ::-webkit-scrollbar-thumb {
       background: var(--color-border);

@@ -133,10 +133,10 @@ export const CountdownBadge: React.FC<CountdownBadgeProps> = ({ endDate, classNa
   };
 
   return (
-    <div className={`flex items-center justify-center gap-1.5 bg-black/70 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg ${className}`}>
-      <Clock className="w-4 h-4 text-red-400" />
-      <span className="text-[10px] font-medium">Oferta:</span>
-      <span className="text-[11px] font-bold text-red-400">{getTimeString()}</span>
+    <div className={`flex items-center justify-center gap-1 bg-zinc-900/80 backdrop-blur-md text-white px-2 py-1 rounded-md border border-white/10 shadow-lg ${className}`}>
+      <Clock className="w-3 h-3 text-primary" />
+      {showLabel && <span className="text-[8px] font-black uppercase tracking-tighter opacity-70">Oferta</span>}
+      <span className="text-[9px] font-black tabular-nums tracking-tight text-primary">{getTimeString()}</span>
     </div>
   );
 };

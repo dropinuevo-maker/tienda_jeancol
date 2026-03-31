@@ -5,6 +5,7 @@ import { usePageLoading } from './hooks/usePageLoading';
 import { useStore } from './context/StoreContext';
 import { useAuth } from './context/AuthContext';
 import { MaintenanceScreen } from './pages/MaintenanceScreen';
+import ChatBot from './components/ChatBot';
 
 export default function App() {
   const location = useLocation();
@@ -45,6 +46,7 @@ export default function App() {
   return (
     <>
       <Router />
+      {!isAdminMode && <ChatBot />}
     </>
   );
 }

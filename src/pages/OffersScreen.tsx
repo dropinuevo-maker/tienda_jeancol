@@ -10,26 +10,21 @@ import { motion } from 'framer-motion';
 import { ProductCard } from '../components/ProductCard';
 import { Helmet } from 'react-helmet-async';
 
-const productsWithOffers = [
-  { id: '1', name: 'Sudadera Premium Oversize', price: 89.99, offerPrice: 45.99, image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=800&q=80', category: 'Hombres', rating: 4.8, offerEndDate: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() },
-  { id: '2', name: 'Vestido de Seda Nocturno', price: 249.99, offerPrice: 129.99, image: 'https://images.unsplash.com/photo-1539008835154-33321e17c76a?auto=format&fit=crop&w=800&q=80', category: 'Mujeres', rating: 4.9, offerEndDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: '3', name: 'Reloj Cronógrafo Elite', price: 399.99, offerPrice: 199.99, image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&w=800&q=80', category: 'Accesorios', rating: 4.7, offerEndDate: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString() },
-  { id: '4', name: 'Zapatillas de Running Pro', price: 159.99, offerPrice: 89.99, image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80', category: 'Calzado', rating: 4.6, offerEndDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: '5', name: 'Chaqueta Bomber', price: 179.99, offerPrice: 89.99, image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=800&q=80', category: 'Hombres', rating: 4.5, offerEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: '6', name: 'Bolso de Cuero', price: 129.99, offerPrice: 64.99, image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=800&q=80', category: 'Accesorios', rating: 4.8, offerEndDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: '7', name: 'Camisa Formal', price: 79.99, offerPrice: 39.99, image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=800&q=80', category: 'Hombres', rating: 4.4, offerEndDate: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString() },
-  { id: '8', name: 'Falda Midi', price: 99.99, offerPrice: 49.99, image: 'https://images.unsplash.com/photo-1583496661160-fb5886a0uj7d?auto=format&fit=crop&w=800&q=80', category: 'Mujeres', rating: 4.7, offerEndDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: '9', name: 'Gafas Aviador', price: 149.99, offerPrice: 74.99, image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=800&q=80', category: 'Accesorios', rating: 4.9, offerEndDate: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString() },
-  { id: '10', name: 'Botas Chelsea', price: 219.99, offerPrice: 109.99, image: 'https://images.unsplash.com/photo-1542280756-74b2f55e73ab?auto=format&fit=crop&w=800&q=80', category: 'Calzado', rating: 4.6, offerEndDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: '11', name: 'Pantalón Cargo', price: 89.99, offerPrice: 44.99, image: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=800&q=80', category: 'Hombres', rating: 4.5, offerEndDate: new Date(Date.now() + 10 * 60 * 60 * 1000).toISOString() },
-  { id: '12', name: 'Top Deportivo', price: 59.99, offerPrice: 29.99, image: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=800&q=80', category: 'Deportes', rating: 4.8, offerEndDate: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString() },
-];
+import { useProducts } from '../context/ProductContext';
 
 export const OffersScreen = () => {
   const navigate = useNavigate();
+  const { products } = useProducts();
+
+  const productsWithOffers = products.filter(p => {
+    const offerPrice = Number(p.offerPrice);
+    const discount = Number(p.discount);
+    const hasOffer = (offerPrice > 0) || (discount > 0);
+    return hasOffer;
+  });
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950 transition-colors duration-500 pb-20">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-500 pb-20">
       <Helmet>
         <title>Ofertas | JEANCOL</title>
         <meta name="description" content="Aprovecha las mejores ofertas y descuentos en moda exclusiva." />
@@ -116,14 +111,14 @@ export const OffersScreen = () => {
       </div>
 
       {/* Products Grid */}
-      <section className="py-6 md:py-10 bg-zinc-50 dark:bg-zinc-900/50">
+      <section className="py-6 md:py-10 bg-background/50">
         <div className="w-full px-4 lg:px-6">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
               <Flame className="w-4 h-4 text-primary" />
-              <h2 className="text-lg md:text-xl font-black text-zinc-900 dark:text-white uppercase tracking-tight">Productos en Oferta</h2>
+              <h2 className="text-lg md:text-xl font-black text-foreground uppercase tracking-tight">Productos en Oferta</h2>
             </div>
-            <span className="text-xs font-medium text-zinc-500">{productsWithOffers.length} productos</span>
+            <span className="text-xs font-medium text-foreground-muted">{productsWithOffers.length} productos</span>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">

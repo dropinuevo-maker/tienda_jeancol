@@ -14,7 +14,7 @@ interface CustomerReviewModalProps {
 }
 
 const MAX_IMAGE_SIZE = 500 * 1024;
-const MAX_VIDEO_SIZE = 2 * 1024 * 1024;
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
 const MAX_IMAGES = 6;
 const MAX_VIDEOS = 2;
 

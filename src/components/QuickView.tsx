@@ -301,28 +301,28 @@ export const QuickView = ({ product, onClose }: QuickViewProps) => {
               <div className="flex gap-4 pt-4">
                 <button 
                   onClick={handleAddToCart}
-                  className="flex-1 h-20 bg-primary text-white rounded-[2rem] flex items-center justify-center gap-4 font-black text-xs uppercase tracking-[0.3em] shadow-2xl shadow-primary/40 hover:scale-[1.02] active:scale-95 transition-all group relative overflow-hidden"
+                  className="flex-1 h-14 bg-primary text-white rounded-[1.5rem] flex items-center justify-center gap-3 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all group relative overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12" />
-                  <ShoppingCart className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+                  <ShoppingCart className="w-5 h-5 group-hover:rotate-12 transition-transform" />
                   Añadir al Carrito
                 </button>
                 <button 
                   onClick={() => setIsFavorite(!isFavorite)}
                   className={cn(
-                    "w-20 h-20 rounded-[2rem] border-2 flex items-center justify-center transition-all active:scale-95 group",
+                    "w-14 h-14 rounded-[1.5rem] border-2 flex items-center justify-center transition-all active:scale-95 group",
                     isFavorite 
                       ? "bg-primary/10 border-primary text-primary" 
                       : "border-zinc-100 dark:border-zinc-800 text-zinc-400 hover:border-primary hover:text-primary"
                   )}
                 >
-                  <Heart className={cn("w-7 h-7 transition-transform group-hover:scale-110", isFavorite && "fill-current")} />
+                  <Heart className={cn("w-5 h-5 transition-transform group-hover:scale-110", isFavorite && "fill-current")} />
                 </button>
                 <button 
                   onClick={handleShare}
-                  className="w-20 h-20 rounded-[2rem] border-2 border-zinc-100 dark:border-zinc-800 text-zinc-400 flex items-center justify-center hover:border-primary hover:text-primary transition-all active:scale-95 group"
+                  className="w-14 h-14 rounded-[1.5rem] border-2 border-zinc-100 dark:border-zinc-800 text-zinc-400 flex items-center justify-center hover:border-primary hover:text-primary transition-all active:scale-95 group"
                 >
-                  <Share2 className="w-7 h-7 transition-transform group-hover:scale-110" />
+                  <Share2 className="w-5 h-5 transition-transform group-hover:scale-110" />
                 </button>
               </div>
 

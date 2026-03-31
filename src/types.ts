@@ -34,7 +34,7 @@ export interface ProductVariation {
 export interface Product {
   id: string;
   name: string;
-  slug: string;
+  slug?: string;
   price: number;
   category: string;
   image: string;
@@ -52,9 +52,10 @@ export interface Product {
   stock?: number;
   rating?: number;
   reviewsCount?: number;
-  reviews?: Review[];
+  reviews?: Review[] | number;
   isNew?: boolean;
   isTrending?: boolean;
+  hasVariations?: boolean;
   featured?: boolean;
   new?: boolean;
   trending?: boolean;
@@ -107,7 +108,7 @@ export interface Order {
   couponCode?: string;
   total: number;
   status: OrderStatus;
-  paymentMethod: 'efectivo' | 'transferencia' | 'contraentrega';
+  paymentMethod: 'efectivo' | 'transferencia' | 'contraentrega' | string;
   createdAt: string;
   updatedAt?: string;
   date?: string;
@@ -142,6 +143,7 @@ export interface Category {
   active: boolean;
   order: number;
   description?: string;
+  count?: number;
 }
 
 export interface UserProfile {
@@ -165,8 +167,29 @@ export interface AuthContextType {
   loading: boolean;
   isLoading?: boolean;
   isAdmin: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<{success: boolean; error?: string}>;
+  signIn: (email: string, password: string) => Promise<{success: boolean; error?: string}>;
+  signUp: (email: string, password: string, name?: string) => Promise<{success: boolean; error?: string}>;
   signOut: () => Promise<void>;
+  checkAdminStatus: () => Promise<boolean>;
+}
+
+export interface HomeBanner {
+  id: string;
+  image: string;
+  title: string;
+  subtitle: string;
+  buttonText: string;
+  buttonLink: string;
+  order: number;
+}
+
+export interface HomeSection {
+  id: string;
+  name: string;
+  type: 'categories' | 'products' | 'new_arrivals' | 'testimonials' | 'blog' | 'custom';
+  active: boolean;
+  order: number;
 }
 
 export interface StoreConfig {
@@ -187,21 +210,36 @@ export interface StoreConfig {
   heroTitle?: string;
   heroSubtitle?: string;
   description?: string;
+  banners?: HomeBanner[];
+  sections?: HomeSection[];
+  homeCollections?: any[];
+  trustItems?: { icon: string; title: string; description: string }[];
+  testimonials?: { id: string | number; name: string; role: string; content: string; avatar: string; rating: number }[];
+  testimonialsTitle?: string;
+  testimonialsSubtitle?: string;
+  collectionsTitle?: string;
+  collectionsSubtitle?: string;
+  featuredTitle?: string;
+  featuredSubtitle?: string;
 }
 
 export interface StoreContextType {
   config: StoreConfig;
   updateConfig: (newConfig: Partial<StoreConfig>) => Promise<boolean>;
+  updateSettings: (newSettings: any) => Promise<boolean>;
   isLoading: boolean;
   loading?: boolean;
   fetchConfig: () => Promise<void>;
   setIsMaintenanceMode: (value: boolean) => void;
   getStoreName: () => string;
+  getLogo: () => string;
+  getMaintenanceTimeLeft: () => { days: number; hours: number; minutes: number; seconds: number } | null;
   settings?: any;
 }
 
 export interface CartContextType {
   cart: CartItem[];
+  items: CartItem[];
   addToCart: (product: Product, quantity?: number, size?: string, color?: string) => void;
   addItem: (product: Product, quantity?: number, size?: string, color?: string) => void;
   removeFromCart: (productId: string, size?: string, color?: string) => void;
@@ -210,12 +248,14 @@ export interface CartContextType {
   clearCart: () => void;
   totalItems: number;
   subtotal: number;
+  totalPrice: number;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   getSubtotal: () => number;
   getTotal: () => number;
   freeShippingProgress: number;
   remainingForFreeShipping: number;
+  freeShippingThreshold: number;
   appliedCoupon: Coupon | null;
   setAppliedCoupon: (coupon: Coupon | null) => void;
   discount: number;
@@ -228,6 +268,7 @@ export interface CategoryContextType {
   addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
   updateCategory: (id: string, category: Partial<Category>) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
+  getCategoryByName: (name: string) => Category | undefined;
 }
 
 export interface ProductContextType {
@@ -243,6 +284,8 @@ export interface OrderContextType {
   loading: boolean;
   stats: any;
   addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Promise<boolean>;
+  updateOrder: (id: string, order: Partial<Order>) => Promise<boolean>;
+  deleteOrder: (id: string) => Promise<boolean>;
   updateOrderStatus: (id: string, status: OrderStatus) => Promise<boolean>;
   fetchOrders: () => Promise<void>;
   getStats: () => any;
@@ -253,10 +296,16 @@ export interface ReviewContextType {
   reviews: Review[];
   loading: boolean;
   pendingReviews: Review[];
+  approvedReviews: Review[];
   getPendingCount: () => number;
   addReview: (review: Omit<Review, 'id' | 'createdAt' | 'status'>) => Promise<void>;
+  addReviewDirect: (review: any) => Promise<void>;
   updateReviewStatus: (id: string, status: Review['status']) => Promise<void>;
+  updateReviewDirect: (id: string, review: any) => Promise<void>;
   deleteReview: (id: string) => Promise<void>;
+  deleteReviewDirect: (id: string) => Promise<void>;
+  approveReview: (id: string) => Promise<void>;
+  rejectReview: (id: string) => Promise<void>;
   getProductReviews: (productId: string) => Review[];
   fetchReviews: () => Promise<void>;
 }

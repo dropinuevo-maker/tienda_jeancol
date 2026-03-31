@@ -7,39 +7,15 @@ import { useToast } from '../../context/ToastContext';
 import { Coupon } from '../../types';
 
 export const AdminCouponsScreen = () => {
-  const { coupons, addCoupon, updateCoupon, deleteCoupon, toggleCouponStatus, loading } = useCoupons();
+  const { coupons, addCoupon, updateCoupon, deleteCoupon, toggleCouponStatus } = useCoupons();
   const { theme } = useTheme();
-  const { success, error: showError } = useToast();
+  const { showToast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [showModal, setShowModal] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [previewDiscount, setPreviewDiscount] = useState<number | null>(null);
-
-  const isExpired = (coupon: Coupon) => {
-    if (!coupon.validUntil) return false;
-    return new Date(coupon.validUntil) < new Date();
-  };
-
-  const getDaysRemaining = (validUntil: string) => {
-    const now = new Date();
-    const end = new Date(validUntil);
-    const diff = end.getTime() - now.getTime();
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    return days;
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-black uppercase tracking-widest text-zinc-500">Cargando cupones...</p>
-        </div>
-      </div>
-    );
-  }
 
   const [formData, setFormData] = useState({
     code: '',
@@ -113,31 +89,31 @@ export const AdminCouponsScreen = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.code) {
-      showError('El código es requerido');
+      showToast('El código es requerido', 'error');
       return;
     }
 
     if (formData.type === 'percent' && formData.discount > 100) {
-      showError('El porcentaje no puede ser mayor a 100%');
+      showToast('El porcentaje no puede ser mayor a 100%', 'error');
       return;
     }
 
     if (new Date(formData.validFrom) > new Date(formData.validUntil)) {
-      showError('La fecha de inicio debe ser anterior a la fecha fin');
+      showToast('La fecha de inicio debe ser anterior a la fecha fin', 'error');
       return;
     }
 
     const existingCoupon = coupons.find(c => c.code.toUpperCase() === formData.code.toUpperCase() && c.id !== editingCoupon?.id);
     if (existingCoupon) {
-      showError('Este código ya existe');
+      showToast('Este código ya existe', 'error');
       return;
     }
 
     const couponData = {
       ...formData,
       minPurchase: formData.minPurchase || 0,
-      maxDiscount: formData.maxDiscount || undefined,
-      maxUses: formData.maxUses || undefined,
+      maxDiscount: formData.maxDiscount || 0,
+      maxUses: formData.maxUses || 0,
     };
 
     if (editingCoupon) {
@@ -156,7 +132,7 @@ export const AdminCouponsScreen = () => {
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
-    success('Código copiado');
+    showToast('Código copiado', 'success');
   };
 
   const getCouponValue = (coupon: Coupon) => {
@@ -166,9 +142,26 @@ export const AdminCouponsScreen = () => {
     return `$${(coupon.discount || 0).toLocaleString('es-CO')}`;
   };
 
+
+  const isExpired = (coupon: Coupon) => {
+    const expiryDate = coupon.validUntil || coupon.expiresAt || coupon.expiryDate;
+    if (!expiryDate) return false;
+    return new Date(expiryDate) < new Date();
+  };
+
+  const getDaysRemaining = (validUntil?: string) => {
+    if (!validUntil) return 0;
+    const now = new Date();
+    const end = new Date(validUntil);
+    const diff = end.getTime() - now.getTime();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    return days;
+  };
+
   const getStatusBadge = (coupon: Coupon) => {
     const expired = isExpired(coupon);
-    const daysLeft = coupon.validUntil ? getDaysRemaining(coupon.validUntil) : 0;
+    const expiryDate = coupon.validUntil || coupon.expiresAt || coupon.expiryDate;
+    const daysLeft = getDaysRemaining(expiryDate);
 
     if (expired) {
       return { text: 'Expirado', class: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' };
@@ -320,7 +313,7 @@ export const AdminCouponsScreen = () => {
                           <p className="text-xs text-zinc-500 mt-0.5">Mín. ${coupon.minPurchase.toLocaleString('es-CO')}</p>
                         )}
                       </div>
-                      {coupon.maxDiscount && (coupon.type === 'percent' || (coupon.type as string) === 'percentage') && (
+                      {coupon.maxDiscount && coupon.type === 'percentage' && (
                         <div className="text-right">
                           <p className="text-xs text-zinc-500">Max</p>
                           <p className="font-bold text-sm text-zinc-700 dark:text-zinc-300">${coupon.maxDiscount.toLocaleString('es-CO')}</p>
@@ -339,7 +332,7 @@ export const AdminCouponsScreen = () => {
                           Válido hasta
                         </span>
                         <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                          {coupon.validUntil ? new Date(coupon.validUntil).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                          {new Date(coupon.validUntil || coupon.expiresAt || coupon.expiryDate || '').toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </span>
                       </div>
                       

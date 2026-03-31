@@ -1,4 +1,4 @@
-export const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+export const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB
 
 export const compressImage = async (file: File, maxWidth: number = 1200, maxHeight: number = 1200, quality: number = 0.8): Promise<string> => {
   return new Promise((resolve, reject) => {

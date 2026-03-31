@@ -19,13 +19,29 @@ export const ProductsScreen = () => {
   const [sortBy, setSortBy] = useState<SortOption>('random');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000000]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync search query from URL
+  useEffect(() => {
+    const query = searchParams.get('search') || '';
+    if (query !== searchQuery) {
+      setSearchQuery(query);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const saved = localStorage.getItem('recentSearches');
     if (saved) setRecentSearches(JSON.parse(saved));
+  }, []);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      searchInputRef.current?.focus();
+    };
+    window.addEventListener('focusSearch', handleFocus);
+    return () => window.removeEventListener('focusSearch', handleFocus);
   }, []);
 
   useEffect(() => {
@@ -63,12 +79,14 @@ export const ProductsScreen = () => {
   }, [allProducts]);
 
   const priceStats = useMemo(() => {
-    const prices = allProducts.map(p => p.price);
+    if (allProducts.length === 0) return { min: 0, max: 100000000 };
+    const prices = allProducts.map(p => Number(p.price)).filter(p => !isNaN(p));
+    if (prices.length === 0) return { min: 0, max: 100000000 };
     return { min: Math.min(...prices), max: Math.max(...prices) };
   }, [allProducts]);
 
   useEffect(() => {
-    if (priceStats.min > 0) {
+    if (priceStats.max > 0) {
       setPriceRange([priceStats.min, priceStats.max]);
     }
   }, [priceStats]);
@@ -76,6 +94,14 @@ export const ProductsScreen = () => {
   const products = useMemo(() => {
     let filtered = allProducts;
     
+    // Show all products (removed restrictive stock filter)
+    // filtered = filtered.filter(p => {
+    //   if (p.hasVariations && (!p.variations || p.variations.length === 0)) {
+    //     return (p.stock || 0) > 0;
+    //   }
+    //   return true;
+    // });
+
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(p => 
@@ -93,7 +119,10 @@ export const ProductsScreen = () => {
       filtered = filtered.filter(p => p.category.toLowerCase() === selectedCategory.toLowerCase());
     }
 
-    filtered = filtered.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
+    filtered = filtered.filter(p => {
+      const price = Number(p.price) || 0;
+      return price >= priceRange[0] && price <= priceRange[1];
+    });
 
     switch (sortBy) {
       case 'random':
@@ -151,20 +180,20 @@ export const ProductsScreen = () => {
   const filteredCount = searchQuery ? products.length : 0;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-500">
       <Helmet>
         <title>Todos Los Productos | JEANCOL</title>
         <meta name="description" content="Descubre las últimas tendencias en moda." />
       </Helmet>
 
       {/* Header */}
-      <div className="relative bg-zinc-900 overflow-hidden">
+      <div className="relative overflow-hidden border-b border-zinc-200 dark:border-zinc-800" style={{ backgroundColor: 'var(--color-surface)' }}>
         {/* Animated Background */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 opacity-50 dark:opacity-100">
           <motion.div 
             animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-gradient-to-br from-violet-500/30 to-fuchsia-500/20 rounded-full blur-[150px]"
+            className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-gradient-to-br from-primary/30 to-primary/10 rounded-full blur-[150px]"
           />
         </div>
 
@@ -174,7 +203,7 @@ export const ProductsScreen = () => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             onClick={() => navigate('/')}
-            className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors mb-6 group"
+            className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors mb-6 group"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             <span className="text-sm font-medium">Volver</span>
@@ -188,14 +217,14 @@ export const ProductsScreen = () => {
             className="flex flex-col md:flex-row md:items-end md:justify-between gap-6"
           >
             <div>
-              <div className="inline-flex items-center gap-2 bg-violet-500/20 border border-violet-500/30 px-4 py-2 rounded-full mb-4">
-                <Sparkles className="w-4 h-4 text-violet-400" />
-                <span className="text-violet-300 text-xs font-bold uppercase tracking-wider">Nueva Colección 2026</span>
+              <div className="inline-flex items-center gap-2 bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 px-4 py-2 rounded-full mb-4">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <span className="text-primary dark:text-primary text-xs font-bold uppercase tracking-wider">Nueva Colección 2026</span>
               </div>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white uppercase tracking-tighter leading-none mb-2">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-zinc-900 dark:text-white uppercase tracking-tighter leading-none mb-2">
                 Todos Los Productos
               </h1>
-              <p className="text-zinc-400 text-sm">
+              <p className="text-zinc-500 dark:text-zinc-400 text-sm">
                 {allProducts.length} productos disponibles
               </p>
             </div>
@@ -209,12 +238,12 @@ export const ProductsScreen = () => {
               >
                 <div className={`
                   relative group transition-all duration-300
-                  ${isSearchFocused ? 'ring-2 ring-violet-500' : ''}
+                  ${isSearchFocused ? 'ring-2 ring-primary' : ''}
                 `}>
                   <Search className={`
                     absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 
                     transition-colors duration-200
-                    ${isSearchFocused ? 'text-violet-400' : 'text-zinc-500'}
+                    ${isSearchFocused ? 'text-primary' : 'text-zinc-400'}
                   `} />
                   <input
                     ref={searchInputRef}
@@ -226,10 +255,10 @@ export const ProductsScreen = () => {
                     onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                     className="
                       w-full pl-12 pr-20 py-3.5 
-                      bg-zinc-800/70 backdrop-blur-sm 
-                      border border-zinc-700 
+                      bg-white dark:bg-zinc-800/70 backdrop-blur-sm 
+                      border border-zinc-200 dark:border-zinc-700 
                       rounded-xl 
-                      text-white placeholder:text-zinc-500 
+                      text-zinc-900 dark:text-white placeholder:text-zinc-400 
                       focus:outline-none 
                       transition-all duration-200
                       text-sm md:text-base
@@ -239,9 +268,9 @@ export const ProductsScreen = () => {
                     {searchQuery && (
                       <button
                         onClick={() => setSearchQuery('')}
-                        className="p-1 hover:bg-zinc-700 rounded-full transition-colors"
+                        className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-full transition-colors"
                       >
-                        <X className="w-4 h-4 text-zinc-400" />
+                        <X className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                       </button>
                     )}
                     <span className="text-xs text-zinc-600 bg-zinc-800 px-1.5 py-0.5 rounded">
@@ -264,7 +293,7 @@ export const ProductsScreen = () => {
                         <div className="p-3 border-b border-zinc-700">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-xs text-zinc-500 uppercase font-semibold">Búsquedas recientes</span>
-                            <button onClick={clearRecentSearches} className="text-xs text-violet-400 hover:text-violet-300">
+                            <button onClick={clearRecentSearches} className="text-xs text-primary hover:text-primary/80">
                               Limpiar
                             </button>
                           </div>
@@ -305,7 +334,7 @@ export const ProductsScreen = () => {
                                   <div className="text-white text-sm font-medium truncate">{product.name}</div>
                                   <div className="text-zinc-400 text-xs">{product.category}</div>
                                 </div>
-                                <div className="text-violet-400 text-sm font-bold">
+                                <div className="text-primary text-sm font-bold">
                                   ${product.price.toLocaleString('es-CO')}
                                 </div>
                               </button>
@@ -313,7 +342,7 @@ export const ProductsScreen = () => {
                           </div>
                           <button
                             onClick={() => {}}
-                            className="w-full py-2 text-center text-sm text-violet-400 hover:text-violet-300 border-t border-zinc-700 mt-1"
+                            className="w-full py-2 text-center text-sm text-primary hover:text-primary/80 border-t border-zinc-700 mt-1"
                           >
                             Ver todos los resultados →
                           </button>
@@ -336,7 +365,7 @@ export const ProductsScreen = () => {
                               <button
                                 key={tag.query}
                                 onClick={() => handleSearch(tag.query)}
-                                className="px-3 py-1.5 text-xs font-medium bg-zinc-700/50 hover:bg-violet-600/50 text-zinc-400 hover:text-violet-300 border border-zinc-600 hover:border-violet-500/50 rounded-full transition-all"
+                                className="px-3 py-1.5 text-xs font-medium bg-zinc-700/50 hover:bg-primary/50 text-zinc-400 hover:text-white border border-zinc-600 hover:border-primary/50 rounded-full transition-all"
                               >
                                 <tag.icon className="w-3 h-3 inline mr-1" />
                                 {tag.label}
@@ -361,9 +390,9 @@ export const ProductsScreen = () => {
       </div>
 
       {/* Main Content */}
-      <div className="bg-zinc-50 dark:bg-zinc-950">
+      <div className="bg-background">
         {/* Filter Bar */}
-        <div className="sticky top-0 z-30 bg-zinc-50/95 dark:bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800">
+        <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800">
           <div className="px-4 lg:px-8 py-3 space-y-3">
             {/* Category Chips */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
@@ -372,7 +401,7 @@ export const ProductsScreen = () => {
                 className={`
                   px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-all
                   ${!selectedCategory 
-                    ? 'bg-violet-600 text-white' 
+                    ? 'bg-primary text-white' 
                     : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}
                 `}
               >
@@ -385,7 +414,7 @@ export const ProductsScreen = () => {
                   className={`
                     px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-all
                     ${selectedCategory === cat
-                      ? 'bg-violet-600 text-white'
+                      ? 'bg-primary text-white'
                       : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}
                   `}
                 >
@@ -470,7 +499,7 @@ export const ProductsScreen = () => {
                   <motion.div
                     key={product.id}
                     layout
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 1, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ delay: index * 0.02, duration: 0.2 }}

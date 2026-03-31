@@ -2,9 +2,11 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Pencil, Trash2, X, Check, Search, Upload, Camera, Package } from 'lucide-react';
 import { useCategories, useCategoryCount } from '../../context/CategoryContext';
-import { Category } from '../../types';
+import { Category } from '@/types';
 import { AdminNavigation } from '../../components/AdminNavigation';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
+import { compressImage } from '../../utils/imageUtils';
 
 const CategoryCard: React.FC<{
   category: Category;
@@ -37,7 +39,7 @@ const CategoryCard: React.FC<{
           </h3>
         </div>
 
-        <div className="absolute top-2 sm:top-4 right-2 sm:right-4 flex gap-1.5 sm:gap-2 md:opacity-0 md:group-hover:opacity-100 transition-all">
+        <div className="absolute top-2 sm:top-4 right-2 sm:right-4 flex gap-1.5 sm:gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all">
           <button
             onClick={() => onEdit(category)}
             className="p-1.5 sm:p-2 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg hover:bg-white transition-colors"
@@ -61,21 +63,6 @@ const CategoryCard: React.FC<{
               {productCount} {productCount === 1 ? 'producto' : 'productos'}
             </span>
           </div>
-          
-          <div className="hidden md:flex items-center gap-1">
-            <button
-              onClick={() => onEdit(category)}
-              className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-zinc-500 hover:text-primary hover:bg-zinc-800' : 'text-zinc-400 hover:text-primary hover:bg-primary/10'}`}
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onDelete(category.id)}
-              className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-zinc-500 hover:text-red-400 hover:bg-red-900/20' : 'text-zinc-400 hover:text-red-500 hover:bg-red-50'}`}
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
         </div>
       </div>
     </motion.div>
@@ -83,8 +70,9 @@ const CategoryCard: React.FC<{
 };
 
 export const AdminCategoriesScreen = () => {
-  const { categories, addCategory, updateCategory, deleteCategory, loading } = useCategories();
+  const { categories, addCategory, updateCategory, deleteCategory } = useCategories();
   const { theme } = useTheme();
+  const { success, error: toastError } = useToast();
   const isDark = theme === 'dark';
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -92,48 +80,22 @@ export const AdminCategoriesScreen = () => {
   const [formData, setFormData] = useState({
     name: '',
     image: '',
-    slug: '',
-    active: true,
-    order: 0,
-    description: ''
   });
   const imageInputRef = useRef<HTMLInputElement>(null);
-
-  if (loading) {
-    return (
-      <div className={`min-h-screen flex ${isDark ? 'bg-zinc-950 text-white' : 'bg-zinc-50 text-zinc-900'}`}>
-        <AdminNavigation />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs font-black uppercase tracking-widest opacity-50">Cargando categorías...</p>
-          </div>
-        </main>
-      </div>
-    );
-  }
 
   const filteredCategories = categories.filter(cat =>
     cat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
-  };
-
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        const base64 = await fileToBase64(file);
-        setFormData(prev => ({ ...prev, image: base64 }));
-      } catch (error) {
-        console.error('Error uploading image:', error);
+        const compressed = await compressImage(file, 800, 600, 0.7);
+        setFormData(prev => ({ ...prev, image: compressed }));
+      } catch (err) {
+        console.error('Error uploading image:', err);
+        toastError('Error al subir la imagen');
       }
     }
     if (imageInputRef.current) {
@@ -141,53 +103,60 @@ export const AdminCategoriesScreen = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.image) return;
-
-    if (editingCategory) {
-      updateCategory(editingCategory.id, formData);
-    } else {
-      addCategory(formData);
+    if (!formData.name || !formData.image) {
+      toastError('Por favor completa todos los campos');
+      return;
     }
-    resetForm();
+
+    try {
+      if (editingCategory) {
+        await updateCategory(editingCategory.id, formData);
+        success('Categoría actualizada exitosamente');
+      } else {
+        await addCategory({
+          ...formData,
+          slug: formData.name.toLowerCase().replace(/\s+/g, '-'),
+          active: true,
+          order: categories.length + 1
+        });
+        success('Categoría creada exitosamente');
+      }
+      resetForm();
+    } catch (err) {
+      console.error('Error saving category:', err);
+      toastError('Error al guardar la categoría');
+    }
   };
 
   const handleEdit = (category: Category) => {
     setEditingCategory(category);
-    setFormData({
-      name: category.name,
-      image: category.image,
-      slug: category.slug,
-      active: category.active,
-      order: category.order,
-      description: category.description || ''
-    });
+    setFormData({ name: category.name, image: category.image });
     setShowModal(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('¿Estás seguro de eliminar esta categoría?')) {
-      deleteCategory(id);
+  const handleDelete = async (id: string) => {
+    if (window.confirm('¿Estás seguro de eliminar esta categoría?')) {
+      try {
+        await deleteCategory(id);
+        success('Categoría eliminada exitosamente');
+      } catch (err) {
+        console.error('Error deleting category:', err);
+        toastError('Error al eliminar la categoría');
+      }
     }
   };
 
   const resetForm = () => {
     setShowModal(false);
     setEditingCategory(null);
-    setFormData({
-      name: '',
-      image: '',
-      slug: '',
-      active: true,
-      order: 0,
-      description: ''
-    });
+    setFormData({ name: '', image: '' });
   };
 
   return (
-    <div className={`min-h-screen flex ${isDark ? 'bg-zinc-950' : 'bg-zinc-50'}`}>
-      <AdminNavigation />
+    <div className={`min-h-screen flex flex-col ${isDark ? 'bg-zinc-950' : 'bg-zinc-50'}`}>
+      <AdminNavigation title="Categorías" />
       
       <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">

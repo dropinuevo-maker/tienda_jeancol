@@ -47,24 +47,24 @@ export const MaintenanceScreen = () => {
     },
   };
 
-  const itemVariants = {
+  const itemVariants: any = {
     hidden: { opacity: 0, y: 30, scale: 0.95 },
     visible: {
       opacity: 1,
       y: 0,
       scale: 1,
-      transition: { duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] },
+      transition: { duration: 0.6, ease: "easeOut" },
     },
   };
 
   const floatAnimation = {
     y: [0, -12, 0],
-    transition: { duration: 4, repeat: Infinity, ease: 'easeInOut' },
+    transition: { duration: 4, repeat: Infinity, ease: 'easeInOut' as any },
   };
 
   const rotateSlow = {
     rotate: [0, 360],
-    transition: { duration: 25, repeat: Infinity, ease: 'linear' },
+    transition: { duration: 25, repeat: Infinity, ease: 'linear' as any },
   };
 
   return (
@@ -172,7 +172,7 @@ export const MaintenanceScreen = () => {
             <motion.div variants={itemVariants} className="mb-8 sm:mb-10 md:mb-12">
               <div className="relative inline-block">
                 <motion.div
-                  animate={floatAnimation}
+                  animate={floatAnimation as any}
                   className="relative"
                 >
                   <motion.div
@@ -198,7 +198,7 @@ export const MaintenanceScreen = () => {
                   </motion.div>
                   
                   <motion.div
-                    animate={rotateSlow}
+                    animate={rotateSlow as any}
                     className="absolute -top-3 -right-3 sm:-top-4 sm:-right-4 w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20"
                   >
                     <div className="w-full h-full rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600 shadow-xl flex items-center justify-center">

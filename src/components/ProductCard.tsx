@@ -6,6 +6,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { cn } from '../lib/utils';
 import { CountdownBadge } from './CountdownTimer';
+import { Product } from '../types';
 
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
   ShoppingCart,
@@ -13,21 +14,7 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
 };
 
 export interface ProductCardProps {
-  product: {
-    id: string;
-    name: string;
-    price: number;
-    offerPrice?: number;
-    offerEndDate?: string;
-    image: string;
-    category: string;
-    rating: number;
-    reviews?: number;
-    reviewsCount?: number;
-    isNew?: boolean;
-    isTrending?: boolean;
-    stock?: number;
-  };
+  product: Product;
   index?: number;
   showCountdown?: boolean;
   className?: string;
@@ -213,7 +200,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 1, y: 0 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ delay: index * 0.06, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
@@ -224,14 +211,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         className="relative rounded-2xl overflow-hidden flex flex-col transition-all duration-500"
         style={{
           backgroundColor: 'var(--color-surface)',
-          border: '1.5px solid var(--color-border)',
+          border: '1px solid var(--color-border)',
           boxShadow: 'var(--shadow-sm)',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.boxShadow =
-            'var(--shadow-primary), 0 0 0 1.5px var(--color-primary)';
-          e.currentTarget.style.borderColor = 'var(--color-primary)';
-          e.currentTarget.style.transform = 'translateY(-3px)';
+            'var(--shadow-md)';
+          e.currentTarget.style.borderColor = 'var(--color-border-hover)';
+          e.currentTarget.style.transform = 'translateY(-2px)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
@@ -240,22 +227,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         }}
       >
         {/* ── IMAGE SECTION ── */}
-        <div className="relative aspect-square overflow-hidden">
+        <div className="relative aspect-square overflow-hidden bg-white">
           <img
             src={product.image}
             alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-108"
+            className="w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-105"
             referrerPolicy="no-referrer"
             loading="lazy"
-          />
-
-          {/* Gradient overlay */}
-          <div
-            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-400"
-            style={{
-              background:
-                'linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.1) 50%, transparent 100%)',
-            }}
           />
 
           {/* TOP LEFT — Status Badges */}
@@ -295,43 +273,42 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <CountdownBadge endDate={product.offerEndDate} />
             </div>
           )}
-        </div>
 
-        {/* ── ADD TO CART BUTTON — anchored above info section ── */}
-        <motion.button
-          whileHover={{ scale: 1.12 }}
-          whileTap={{ scale: 0.88 }}
-          onClick={handleAddToCart}
-          className="absolute z-40 w-11 h-11 rounded-full flex items-center justify-center shadow-xl"
-          style={{
-            /* Sits at the seam between image and info section */
-            bottom: '130px',
-            right: '12px',
-            backgroundColor: 'var(--color-surface)',
-            color: 'var(--color-foreground)',
-            border: '2px solid var(--color-border)',
-            transition: 'background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--color-primary)';
-            e.currentTarget.style.color = 'white';
-            e.currentTarget.style.borderColor = 'var(--color-primary)';
-            e.currentTarget.style.boxShadow =
-              '0 0 16px 3px color-mix(in srgb, var(--color-primary) 55%, transparent)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--color-surface)';
-            e.currentTarget.style.color = 'var(--color-foreground)';
-            e.currentTarget.style.borderColor = 'var(--color-border)';
-            e.currentTarget.style.boxShadow = '';
-          }}
-        >
-          {headerIcons.cartIcon?.startsWith('custom_') ? (
-            <img src={customIcons.cartIcon} alt="Add to cart" className="w-5 h-5 object-contain" />
-          ) : (
-            React.createElement(ICON_MAP[headerIcons.cartIcon] || ShoppingBag, { className: "w-5 h-5" })
-          )}
-        </motion.button>
+          {/* ── ADD TO CART BUTTON — anchored inside image section ── */}
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleAddToCart}
+            className="absolute z-40 w-8 h-8 rounded-full flex items-center justify-center shadow-md"
+            style={{
+              bottom: '12px',
+              right: '12px',
+              backgroundColor: 'var(--color-surface)',
+              color: 'var(--color-foreground)',
+              border: '1px solid var(--color-border)',
+              transition: 'background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--color-primary)';
+              e.currentTarget.style.color = 'white';
+              e.currentTarget.style.borderColor = 'var(--color-primary)';
+              e.currentTarget.style.boxShadow =
+                '0 0 12px 2px color-mix(in srgb, var(--color-primary) 40%, transparent)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--color-surface)';
+              e.currentTarget.style.color = 'var(--color-foreground)';
+              e.currentTarget.style.borderColor = 'var(--color-border)';
+              e.currentTarget.style.boxShadow = '';
+            }}
+          >
+            {headerIcons.cartIcon?.startsWith('custom_') ? (
+              <img src={customIcons.cartIcon} alt="Add to cart" className="w-3.5 h-3.5 object-contain" />
+            ) : (
+              React.createElement(ICON_MAP[headerIcons.cartIcon] || ShoppingBag, { className: "w-3.5 h-3.5" })
+            )}
+          </motion.button>
+        </div>
 
         {/* ── INFO SECTION ── */}
         <div
@@ -364,7 +341,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <div className="flex items-center justify-between mt-0.5">
             <div className="flex items-center gap-1">
               <Star
-                className="w-3 h-3"
+                className="w-2.5 h-2.5"
                 style={{
                   fill: 'var(--color-primary)',
                   color: 'var(--color-primary)',

@@ -34,13 +34,38 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const addOrder = async (order: Omit<Order, 'id' | 'createdAt'>) => {
     try {
-      const { data, error } = await supabase
+      // Strip items and other non-database fields
+      const { items, ...dbOrder } = order as any;
+      
+      const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .insert([order])
-        .select();
+        .insert([dbOrder])
+        .select()
+        .single();
 
-      if (error) throw error;
-      setOrders(prev => [data[0], ...prev]);
+      if (orderError) throw orderError;
+
+      // Insert order items if they exist
+      if (items && items.length > 0) {
+        const orderItems = items.map((item: any) => ({
+          orderId: orderData.id,
+          productId: item.productId,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          size: item.size,
+          color: item.color,
+          image: item.image
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('order_items')
+          .insert(orderItems);
+
+        if (itemsError) throw itemsError;
+      }
+
+      setOrders(prev => [orderData, ...prev]);
       return true;
     } catch (error) {
       console.error('Error adding order:', error);
@@ -88,9 +113,46 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return orders.filter(o => o.userId === userId);
   };
 
+  const updateOrder = async (id: string, order: Partial<Order>) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update(order)
+        .eq('id', id);
+
+      if (error) throw error;
+      setOrders(prev => prev.map(o => o.id === id ? { ...o, ...order } : o));
+      toast.success('Pedido actualizado');
+      return true;
+    } catch (error) {
+      console.error('Error updating order:', error);
+      toast.error('Error al actualizar el pedido');
+      return false;
+    }
+  };
+
+  const deleteOrder = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      setOrders(prev => prev.filter(o => o.id !== id));
+      toast.success('Pedido eliminado');
+      return true;
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      toast.error('Error al eliminar el pedido');
+      return false;
+    }
+  };
+
   return (
     <OrderContext.Provider value={{ 
-      orders, addOrder, updateOrderStatus, loading: isLoading, fetchOrders, getStats, stats, getUserOrders 
+      orders, addOrder, updateOrder, deleteOrder, updateOrderStatus, 
+      loading: isLoading, fetchOrders, getStats, stats, getUserOrders 
     }}>
       {children}
     </OrderContext.Provider>

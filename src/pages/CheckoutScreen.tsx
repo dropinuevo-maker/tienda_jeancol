@@ -346,7 +346,7 @@ Por favor indícame los datos para realizar el pago. ¡Gracias!`;
                     >
                       <option value="">Seleccionar departamento</option>
                       {COLOMBIAN_DEPARTMENTS.map((dept) => (
-                        <option key={dept.id} value={dept.name}>{dept.name}</option>
+                        <option key={dept} value={dept}>{dept}</option>
                       ))}
                     </select>
                     {errors.department && <p className="text-xs text-red-500">{errors.department}</p>}
@@ -360,7 +360,7 @@ Por favor indícame los datos para realizar el pago. ¡Gracias!`;
                       className={`bg-white dark:bg-zinc-800 border ${errors.city ? 'border-red-500' : 'border-zinc-200 dark:border-zinc-700'} rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none disabled:opacity-50`}
                     >
                       <option value="">Seleccionar ciudad</option>
-                      {cities.map((city) => (
+                      {cities.map((city: string) => (
                         <option key={city} value={city}>{city}</option>
                       ))}
                     </select>

@@ -1,6 +1,12 @@
 import React from 'react';
 import { DEPARTMENTS } from '@/constants';
 
+export const COLOMBIAN_DEPARTMENTS = DEPARTMENTS;
+
+export const getCitiesByDepartment = (department: string) => {
+  return (COLOMBIA_DATA.cities as any)[department] || [];
+};
+
 export const COLOMBIA_DATA = {
   departments: DEPARTMENTS,
   cities: {

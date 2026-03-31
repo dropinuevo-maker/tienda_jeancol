@@ -26,3 +26,17 @@ export function formatDate(date: string | Date) {
     timeStyle: 'short',
   }).format(new Date(date));
 }
+
+export function parsePrice(price: string): number {
+  return Number(price.replace(/[^0-9]/g, ''));
+}
+
+export function slugify(text: string): string {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')     // Replace spaces with -
+    .replace(/[^\w-]+/g, '')   // Remove all non-word chars
+    .replace(/--+/g, '-');     // Replace multiple - with single -
+}

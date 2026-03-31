@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { cn } from '../lib/utils';
+import { CartItem } from '../types';
 
 export const CartScreen = () => {
   const navigate = useNavigate();
@@ -128,7 +129,7 @@ export const CartScreen = () => {
           {/* Left: Items List */}
           <div className="lg:col-span-2 space-y-10">
             <AnimatePresence mode="popLayout">
-              {items.map(item => (
+              {items.map((item: CartItem) => (
                 <motion.div 
                   key={`${item.id}-${item.selectedSize}`}
                   layout
@@ -164,7 +165,7 @@ export const CartScreen = () => {
                         </div>
                       </div>
                       <button 
-                        onClick={() => removeFromCart(item.id, item.selectedSize)}
+                        onClick={() => removeFromCart(item.id, item.selectedSize, item.selectedColor)}
                         className="w-12 h-12 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-300 hover:text-red-500 hover:bg-red-50 transition-all group/trash"
                       >
                         <Trash2 className="w-6 h-6 group-hover/trash:scale-110 transition-transform" />
@@ -174,14 +175,14 @@ export const CartScreen = () => {
                     <div className="flex items-center justify-between pt-8 border-t border-zinc-50 dark:border-zinc-800/50">
                       <div className="flex items-center bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl px-4 py-2 border border-zinc-100 dark:border-zinc-800 shadow-inner">
                         <button 
-                          onClick={() => updateQuantity(item.id, item.selectedSize, -1)} 
+                          onClick={() => updateQuantity(item.id, item.selectedSize, item.selectedColor, item.quantity - 1)} 
                           className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-primary hover:bg-white dark:hover:bg-zinc-700 transition-all"
                         >
                           <Minus className="w-4 h-4" />
                         </button>
                         <span className="w-12 text-center font-black text-zinc-900 dark:text-white text-lg tracking-tighter">{item.quantity}</span>
                         <button 
-                          onClick={() => updateQuantity(item.id, item.selectedSize, 1)} 
+                          onClick={() => updateQuantity(item.id, item.selectedSize, item.selectedColor, item.quantity + 1)} 
                           className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-primary hover:bg-white dark:hover:bg-zinc-700 transition-all"
                         >
                           <Plus className="w-4 h-4" />

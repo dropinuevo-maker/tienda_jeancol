@@ -14,7 +14,7 @@ export const ProductDetailScreen = () => {
   const navigate = useNavigate();
   const { products, loading } = useProducts();
   const product = products.find(p => p.id === id);
-  const { getReviewsByProduct } = useReviews();
+  const { getProductReviews } = useReviews();
   
   const [activeImage, setActiveImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
@@ -46,11 +46,13 @@ export const ProductDetailScreen = () => {
     );
   }
 
-  const reviews = getReviewsByProduct(product.id);
+  const reviews = getProductReviews(product.id);
   
   const activeVariations = product.variations?.filter(v => v.isActive) || [];
   const variationNames: string[] = Array.from(new Set(activeVariations.map(v => v.name as string)));
   
+  const hasVariations = product.hasVariations && variationNames.length > 0;
+
   const getVariationPrice = () => {
     const matchingVariation = activeVariations.find(v => {
       const nameMatch = v.name in selectedVariations ? v.name : true;
@@ -75,8 +77,7 @@ export const ProductDetailScreen = () => {
     setSelectedVariations(prev => ({ ...prev, [name]: value }));
   };
   
-  const hasVariations = variationNames.length > 0;
-  const currentPrice = hasVariations ? getVariationPrice() : product.price;
+  const currentPrice = hasVariations ? getVariationPrice() : (product.offerPrice || product.price);
   const currentStock = hasVariations ? getVariationStock() : (product.stock || 0);
 
   useEffect(() => {
@@ -96,7 +97,7 @@ export const ProductDetailScreen = () => {
 
   const sizes = product.sizes && product.sizes.length > 0 
     ? product.sizes 
-    : ['38', '39', '40', '41', '42', '43', '44'];
+    : [];
 
   const relatedProducts = products.filter(p => p.category === product.category && p.id !== product.id);
 
@@ -123,7 +124,7 @@ export const ProductDetailScreen = () => {
       showToast('Por favor selecciona una talla', 'error');
       return;
     }
-    addItem(product, selectedSize || undefined, quantity, hasVariations ? selectedVariations : undefined);
+    addItem(product, quantity, selectedSize || undefined, hasVariations ? JSON.stringify(selectedVariations) : undefined);
     showToast(`${product.name} añadido al carrito`, 'success');
   };
 
@@ -142,7 +143,7 @@ export const ProductDetailScreen = () => {
       return;
     }
     clearCart();
-    addItem(product, selectedSize || undefined, quantity, hasVariations ? selectedVariations : undefined);
+    addItem(product, quantity, selectedSize || undefined, hasVariations ? JSON.stringify(selectedVariations) : undefined);
     navigate('/checkout');
   };
 
@@ -362,13 +363,13 @@ export const ProductDetailScreen = () => {
           <div className="flex gap-3 mb-6">
             <button 
               onClick={handleBuyNow}
-              className="flex-1 py-3.5 px-5 rounded-lg bg-primary text-white font-bold text-sm shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all"
+              className="flex-1 py-2.5 px-4 rounded-lg bg-primary text-white font-bold text-xs shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all"
             >
               Comprar Ahora
             </button>
             <button 
               onClick={handleAddToCart}
-              className="flex-1 py-3.5 px-5 rounded-lg border-2 border-primary text-primary font-bold text-sm hover:bg-primary hover:text-white transition-all"
+              className="flex-1 py-2.5 px-4 rounded-lg border-2 border-primary text-primary font-bold text-xs hover:bg-primary hover:text-white transition-all"
             >
               Añadir al Carrito
             </button>

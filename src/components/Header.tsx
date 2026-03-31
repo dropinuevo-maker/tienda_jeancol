@@ -34,7 +34,7 @@ export const Header = () => {
   const { totalItems, freeShippingProgress } = useCart();
   const { products } = useProducts();
   const { config } = useStore();
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -48,6 +48,14 @@ export const Header = () => {
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const activeScreen = location.pathname === '/' ? 'home' : location.pathname.slice(1);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchQuery)}`);
+      setIsSearchOpen(false);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -91,12 +99,14 @@ export const Header = () => {
 
   const navItems = [
     { id: 'home', label: 'Inicio', path: '/' },
+    { id: 'products', label: 'Productos', path: '/products' },
     { id: 'categories', label: 'Categorías', path: '/categories' },
     { id: 'offers', label: 'Ofertas', path: '/offers' }
   ];
 
   const isActive = (item: typeof navItems[0]) => {
     if (item.id === 'home') return location.pathname === '/';
+    if (item.id === 'products') return location.pathname === '/products';
     if (item.id === 'categories') return location.pathname.includes('category') || location.pathname === '/categories';
     if (item.id === 'offers') return location.pathname === '/offers';
     return activeScreen === item.id;
@@ -134,10 +144,10 @@ export const Header = () => {
               to="/"
               className="flex items-center gap-3 cursor-pointer group"
             >
-              <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 shrink-0">
+              <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 shrink-0">
                 <img src={config.logo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
               </div>
-              <span className="text-xl lg:text-2xl font-black tracking-tighter uppercase italic bg-gradient-to-r from-primary via-orange-500 to-amber-500 bg-clip-text text-transparent group-hover:brightness-110 transition-all duration-300 dark:from-orange-300 dark:via-amber-300 dark:to-yellow-400">
+              <span className="text-lg lg:text-xl font-black tracking-tighter uppercase italic bg-gradient-to-r from-primary via-orange-500 to-amber-500 bg-clip-text text-transparent group-hover:brightness-110 transition-all duration-300 dark:from-orange-300 dark:via-amber-300 dark:to-yellow-400">
                 {config.name}
               </span>
             </Link>
@@ -156,7 +166,7 @@ export const Header = () => {
                 >
                   {item.label}
                   {isActive(item) && (
-                    <motion.div layoutId="headerNav" className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                    <motion.div layoutId="headerNav" className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
                   )}
                 </Link>
               ))}
@@ -166,7 +176,7 @@ export const Header = () => {
           <div className="flex items-center gap-2 lg:gap-4 xl:gap-6">
             <div className="hidden lg:flex items-center gap-2 xl:gap-4">
               <button 
-                onClick={() => navigate('/products')}
+                onClick={() => setIsSearchOpen(true)}
                 className="w-10 h-10 xl:w-12 xl:h-12 rounded-full flex items-center justify-center text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all group relative"
               >
                 <Search className="w-5 h-5 xl:w-6 xl:h-6" />
@@ -207,26 +217,33 @@ export const Header = () => {
                 e.preventDefault();
                 window.dispatchEvent(new CustomEvent('openSideCart'));
               }}
-              className="w-12 h-12 lg:w-16 lg:h-16 rounded-full bg-primary text-white flex items-center justify-center shadow-2xl shadow-primary/30 hover:scale-110 active:scale-95 transition-all relative group"
+              className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-2xl shadow-primary/30 hover:scale-110 active:scale-95 transition-all relative group"
             >
               <motion.div
                 animate={totalItems > 0 ? { scale: [1, 1.2, 1] } : {}}
                 transition={{ duration: 0.3 }}
               >
-                <ShoppingCart className="w-6 h-6 lg:w-7 lg:h-7 group-hover:rotate-12 transition-transform" />
+                <ShoppingCart className="w-4 h-4 lg:w-5 lg:h-5 group-hover:rotate-12 transition-transform" />
               </motion.div>
               {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 w-6 h-6 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-zinc-950 shadow-lg animate-bounce-soft">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[8px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-zinc-950 shadow-lg animate-bounce-soft">
                   {totalItems}
                 </span>
               )}
             </Link>
 
             <button 
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden w-12 h-12 flex items-center justify-center text-zinc-900 dark:text-white"
+              onClick={() => setIsSearchOpen(true)}
+              className="lg:hidden w-10 h-10 flex items-center justify-center text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded-full transition-colors"
             >
-              {isMobileMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
+              <Search className="w-5 h-5" />
+            </button>
+
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden w-10 h-10 flex items-center justify-center text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded-full transition-colors"
+            >
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
@@ -255,7 +272,7 @@ export const Header = () => {
                   <div className="w-12 h-12 lg:w-16 lg:h-16 rounded-2xl bg-gradient-to-br from-primary to-orange-400 flex items-center justify-center shadow-lg shadow-primary/20">
                     <Search className="w-6 h-6 lg:w-8 lg:h-8 text-white" />
                   </div>
-                  <div className="flex-1 relative">
+                  <form onSubmit={handleSearchSubmit} className="flex-1 relative">
                     <input 
                       ref={searchInputRef}
                       autoFocus
@@ -267,13 +284,14 @@ export const Header = () => {
                     />
                     {searchQuery && (
                       <button 
+                        type="button"
                         onClick={() => setSearchQuery('')}
                         className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                       >
                         <X className="w-4 h-4" />
                       </button>
                     )}
-                  </div>
+                  </form>
                   <button 
                     onClick={() => setIsSearchOpen(false)}
                     className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-primary transition-all"
@@ -415,41 +433,115 @@ export const Header = () => {
       {/* Mobile Menu */}
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <motion.div 
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[60] bg-white dark:bg-zinc-950 flex flex-col p-8 pt-24"
-          >
-            <div className="space-y-8">
-              {navItems.map((item) => (
-                <Link 
-                  key={item.id}
-                  to={item.path}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-5xl font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white hover:text-primary transition-colors"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-
-            <div className="mt-auto space-y-8">
-              <div className="flex gap-4">
+          <div className="fixed inset-0 z-[60] flex flex-col">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="relative ml-auto w-[80%] h-full bg-white dark:bg-zinc-950 flex flex-col shadow-2xl border-l border-zinc-100 dark:border-zinc-900"
+            >
+              <div className="p-6 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-900">
+                    <img src={config.logo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                  </div>
+                  <span className="text-sm font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white">{config.name}</span>
+                </div>
                 <button 
-                  onClick={toggleTheme}
-                  className="flex-1 h-16 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center gap-4 text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-white"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-zinc-500 hover:text-primary transition-colors"
                 >
-                  {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                  Modo {theme === 'light' ? 'Noche' : 'Día'}
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-              <p className="text-center text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">
-                {config.name} © {new Date().getFullYear()}
-              </p>
-            </div>
-          </motion.div>
+
+              <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1">
+                {navItems.map((item) => (
+                  <Link 
+                    key={item.id}
+                    to={item.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-xl transition-all group",
+                      isActive(item) 
+                        ? "bg-primary/10 text-primary" 
+                        : "hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-900 dark:text-white"
+                    )}
+                  >
+                    <span className="text-xl font-black uppercase tracking-tighter italic">{item.label}</span>
+                    <ArrowRight className={cn("w-5 h-5 transition-transform", isActive(item) ? "translate-x-0 opacity-100" : "-translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100")} />
+                  </Link>
+                ))}
+
+                <div className="pt-8 pb-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-400 px-4 mb-4">Mi Cuenta</p>
+                  {profile ? (
+                    <div className="space-y-2">
+                      <Link 
+                        to={profile.role === 'admin' ? '/admin' : '/profile'}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center gap-4 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-black text-xs">
+                          {profile.name?.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-black text-zinc-900 dark:text-white truncate">{profile.name}</p>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">{profile.role === 'admin' ? 'Administrador' : 'Cliente'}</p>
+                        </div>
+                      </Link>
+                      <button 
+                        onClick={() => {
+                          signOut();
+                          setIsMobileMenuOpen(false);
+                          navigate('/');
+                        }}
+                        className="w-full p-4 rounded-xl bg-red-50 dark:bg-red-950/20 text-red-500 text-xs font-black uppercase tracking-widest text-center border border-red-100 dark:border-red-900/30"
+                      >
+                        Cerrar Sesión
+                      </button>
+                    </div>
+                  ) : (
+                    <Link 
+                      to="/login"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center justify-center p-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-black uppercase tracking-widest shadow-xl shadow-black/10"
+                    >
+                      Iniciar Sesión
+                    </Link>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-zinc-100 dark:border-zinc-900 space-y-6 bg-zinc-50/50 dark:bg-zinc-900/30">
+                <button 
+                  onClick={toggleTheme}
+                  className="w-full h-12 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-widest text-zinc-900 dark:text-white shadow-sm"
+                >
+                  {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                  Modo {theme === 'light' ? 'Noche' : 'Día'}
+                </button>
+                
+                <div className="flex justify-center gap-6">
+                  {['Instagram', 'Facebook', 'WhatsApp'].map(social => (
+                    <span key={social} className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 hover:text-primary transition-colors cursor-pointer">{social}</span>
+                  ))}
+                </div>
+
+                <p className="text-center text-[8px] font-black uppercase tracking-[0.4em] text-zinc-300 dark:text-zinc-700">
+                  {config.name} © {new Date().getFullYear()}
+                </p>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </>

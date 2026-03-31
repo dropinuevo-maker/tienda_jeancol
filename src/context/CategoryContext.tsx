@@ -4,13 +4,15 @@ import toast from 'react-hot-toast';
 
 import { Category, CategoryContextType } from '@/types';
 
+export type { Category };
+
 const CategoryContext = createContext<CategoryContextType | undefined>(undefined);
 
 export const CategoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (retries = 3) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -22,7 +24,12 @@ export const CategoryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setCategories(data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
-      toast.error('Error al cargar categorías');
+      if (retries > 0) {
+        console.log(`Retrying fetchCategories... (${retries} retries left)`);
+        setTimeout(() => fetchCategories(retries - 1), 2000);
+      } else {
+        toast.error('Error al cargar categorías');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -41,9 +48,11 @@ export const CategoryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
       setCategories(prev => [...prev, data[0]]);
+      return data[0];
     } catch (error) {
       console.error('Error adding category:', error);
       toast.error('Error al añadir categoría');
+      throw error;
     }
   };
 
@@ -59,6 +68,7 @@ export const CategoryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } catch (error) {
       console.error('Error updating category:', error);
       toast.error('Error al actualizar categoría');
+      throw error;
     }
   };
 
@@ -74,11 +84,16 @@ export const CategoryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } catch (error) {
       console.error('Error deleting category:', error);
       toast.error('Error al eliminar categoría');
+      throw error;
     }
   };
 
+  const getCategoryByName = (name: string) => {
+    return categories.find(c => c.name.toLowerCase() === name.toLowerCase() || c.slug.toLowerCase() === name.toLowerCase());
+  };
+
   return (
-    <CategoryContext.Provider value={{ categories, addCategory, updateCategory, deleteCategory, loading: isLoading }}>
+    <CategoryContext.Provider value={{ categories, addCategory, updateCategory, deleteCategory, loading: isLoading, getCategoryByName }}>
       {children}
     </CategoryContext.Provider>
   );

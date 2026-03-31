@@ -7,7 +7,6 @@ import {
   Info, Settings, Mail, Smartphone, Zap,
   MessageSquare, Package, Truck, CreditCard
 } from 'lucide-react';
-import { AdminNavigation } from '../../components/AdminNavigation';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -29,14 +28,11 @@ export const AdminNotificationsScreen = () => {
 
   if (loading) {
     return (
-      <div className="pb-24 lg:pb-10 flex flex-col lg:flex-row min-h-screen bg-zinc-50 dark:bg-zinc-950">
-        <AdminNavigation />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Cargando notificaciones...</p>
-          </div>
-        </main>
+      <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Cargando notificaciones...</p>
+        </div>
       </div>
     );
   }
@@ -113,10 +109,8 @@ export const AdminNotificationsScreen = () => {
   };
 
   return (
-    <div className="pb-24 lg:pb-10 flex flex-col lg:flex-row min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <AdminNavigation />
-      <div className="flex-1">
-        <header className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 h-16 lg:h-20 flex items-center px-4 lg:px-8">
+    <div className="p-4 lg:p-8">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
           <div className="flex items-center justify-between w-full">
             <div>
               <h1 className="text-lg lg:text-xl font-black text-zinc-900 dark:text-white uppercase tracking-tight">Notificaciones</h1>
@@ -133,7 +127,7 @@ export const AdminNotificationsScreen = () => {
           </div>
         </header>
 
-        <main className="p-4 lg:p-8 max-w-4xl mx-auto">
+        <div className="p-4 lg:p-8 max-w-4xl mx-auto">
           <div className="flex gap-2 mb-8 overflow-x-auto pb-2 lg:pb-0">
             {(['all', 'unread', 'read'] as const).map((f) => (
               <button
@@ -229,8 +223,7 @@ export const AdminNotificationsScreen = () => {
               )}
             </AnimatePresence>
           </div>
-        </main>
-      </div>
     </div>
+  </div>
   );
 };

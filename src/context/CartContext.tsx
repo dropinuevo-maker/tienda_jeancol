@@ -78,9 +78,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <CartContext.Provider value={{ 
-      cart, addToCart, removeFromCart, removeItem, updateQuantity, clearCart, 
-      totalItems, subtotal, isOpen, setIsOpen, getSubtotal, getTotal,
-      freeShippingProgress, remainingForFreeShipping, appliedCoupon, setAppliedCoupon,
+      cart, items: cart, addToCart, removeFromCart, removeItem, updateQuantity, clearCart, 
+      totalItems, subtotal, totalPrice: subtotal, isOpen, setIsOpen, getSubtotal, getTotal,
+      freeShippingProgress, remainingForFreeShipping, freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
+      appliedCoupon, setAppliedCoupon,
       discount, finalTotal, addItem: addToCart
     }}>
       {children}

@@ -47,6 +47,22 @@ export const ReviewProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const addReviewDirect = async (review: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .insert([review])
+        .select();
+
+      if (error) throw error;
+      setReviews(prev => [data[0], ...prev]);
+      toast.success('Reseña agregada');
+    } catch (error) {
+      console.error('Error adding review direct:', error);
+      toast.error('Error al agregar reseña');
+    }
+  };
+
   const updateReviewStatus = async (id: string, status: Review['status']) => {
     try {
       const { error } = await supabase
@@ -59,6 +75,22 @@ export const ReviewProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } catch (error) {
       console.error('Error updating review status:', error);
       toast.error('Error al actualizar estado de reseña');
+    }
+  };
+
+  const updateReviewDirect = async (id: string, review: any) => {
+    try {
+      const { error } = await supabase
+        .from('reviews')
+        .update(review)
+        .eq('id', id);
+
+      if (error) throw error;
+      setReviews(prev => prev.map(r => r.id === id ? { ...r, ...review } : r));
+      toast.success('Reseña actualizada');
+    } catch (error) {
+      console.error('Error updating review direct:', error);
+      toast.error('Error al actualizar reseña');
     }
   };
 
@@ -77,17 +109,46 @@ export const ReviewProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const deleteReviewDirect = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('reviews')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      setReviews(prev => prev.filter(r => r.id !== id));
+      toast.success('Reseña eliminada');
+    } catch (error) {
+      console.error('Error deleting review direct:', error);
+      toast.error('Error al eliminar reseña');
+    }
+  };
+
+  const approveReview = async (id: string) => {
+    await updateReviewStatus(id, 'approved');
+    toast.success('Reseña aprobada');
+  };
+
+  const rejectReview = async (id: string) => {
+    await updateReviewStatus(id, 'rejected');
+    toast.success('Reseña rechazada');
+  };
+
   const getProductReviews = (productId: string) => {
     return reviews.filter(r => r.productId === productId && r.status === 'approved');
   };
 
   const pendingReviews = reviews.filter(r => r.status === 'pending');
+  const approvedReviews = reviews.filter(r => r.status === 'approved');
   const getPendingCount = () => pendingReviews.length;
 
   return (
     <ReviewContext.Provider value={{ 
-      reviews, addReview, updateReviewStatus, deleteReview, getProductReviews, 
-      loading: isLoading, fetchReviews, pendingReviews, getPendingCount 
+      reviews, addReview, addReviewDirect, updateReviewStatus, updateReviewDirect, 
+      deleteReview, deleteReviewDirect, approveReview, rejectReview, 
+      getProductReviews, loading: isLoading, fetchReviews, pendingReviews, 
+      approvedReviews, getPendingCount 
     }}>
       {children}
     </ReviewContext.Provider>

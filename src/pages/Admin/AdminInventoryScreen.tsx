@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, X, Pencil, Trash2, Eye, Video, Save, ArrowLeft, Camera, Upload, Sparkles, Loader2, GripVertical } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Search, X, Pencil, Trash2, Eye, Video, Save, ArrowLeft, Camera, Upload, Sparkles, Loader2, GripVertical, Palette } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AdminNavigation } from '../../components/AdminNavigation';
 import { useProducts } from '../../context/ProductContext';
@@ -8,49 +8,37 @@ import { useCategories } from '../../context/CategoryContext';
 import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Product, ProductVariation } from '../../types';
-import { formatPriceCOP } from '../../lib/utils';
+import { formatPriceCOP, slugify } from '../../lib/utils';
 import { generateAIDescription, generateAIFeatures, generateVariations } from '../../utils/productGenerator';
 import { compressImage, MAX_VIDEO_SIZE } from '../../utils/imageUtils';
+import { ProductCard } from '../../components/ProductCard';
 
 type StockFilter = 'all' | 'in_stock' | 'low' | 'out';
 
 export const AdminInventoryScreen = () => {
   const navigate = useNavigate();
-  const { products, updateProduct, deleteProduct, loading: productsLoading } = useProducts();
-  const { categories, loading: categoriesLoading } = useCategories();
+  const { products, updateProduct, deleteProduct } = useProducts();
+  const { categories } = useCategories();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   
-  const isLoading = productsLoading || categoriesLoading;
-
-  if (isLoading) {
-    return (
-      <div className={`pb-24 lg:pb-10 flex flex-col lg:flex-row min-h-screen ${isDark ? 'bg-zinc-950' : 'bg-zinc-50/50'}`}>
-        <AdminNavigation />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Cargando inventario...</p>
-          </div>
-        </main>
-      </div>
-    );
-  }
   const [searchQuery, setSearchQuery] = useState('');
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Product>>({});
+  const [editForm, setEditForm] = useState<Partial<Product>>({
+    hasVariations: false,
+  });
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingField, setGeneratingField] = useState<'description' | 'features' | null>(null);
   
   const mainImageRef = useRef<HTMLInputElement>(null);
   const galleryImageRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
-  const { success, error: showError } = useToast();
+  const { showToast } = useToast();
 
   const handleGenerateWithAI = async (field: 'description' | 'features') => {
     if (!editForm.name) {
-      showError('Primero ingresa el nombre del producto');
+      showToast('Primero ingresa el nombre del producto', 'error');
       return;
     }
 
@@ -60,14 +48,20 @@ export const AdminInventoryScreen = () => {
     await new Promise(resolve => setTimeout(resolve, 500));
 
     if (field === 'description') {
-      const description = await generateAIDescription(editForm.name || '');
-      setEditForm(prev => ({ ...prev, description }));
-      success('Descripción generada');
+      const description = await generateAIDescription(editForm.name || '', editForm.brand);
+      setEditForm((prev) => ({ ...prev, description }));
+      showToast('Descripción generada', 'success');
     } else {
-      const featuresRaw = await generateAIFeatures(editForm.name || '', editForm.category || '');
-      const features = featuresRaw.map(f => ({ name: 'Característica', value: f }));
-      setEditForm(prev => ({ ...prev, features }));
-      success('Características generadas');
+      const featuresList = await generateAIFeatures(editForm.name || '', editForm.category || '');
+      const newFeatures = featuresList.map(f => {
+        const [name, ...valueParts] = f.split(':');
+        return { 
+          name: name?.trim() || 'Característica', 
+          value: valueParts.join(':')?.trim() || f.trim() 
+        };
+      });
+      setEditForm((prev) => ({ ...prev, features: [...(prev.features || []), ...newFeatures] }));
+      showToast('Características generadas', 'success');
     }
 
     setIsGenerating(false);
@@ -75,7 +69,7 @@ export const AdminInventoryScreen = () => {
   };
 
   const handleUpdateVariation = (id: string, field: keyof ProductVariation, value: any) => {
-    setEditForm(prev => ({
+    setEditForm((prev) => ({
       ...prev,
       variations: (prev.variations || []).map((v: ProductVariation) => 
         v.id === id ? { ...v, [field]: value } : v
@@ -84,7 +78,7 @@ export const AdminInventoryScreen = () => {
   };
 
   const handleRemoveVariation = (id: string) => {
-    setEditForm(prev => ({
+    setEditForm((prev) => ({
       ...prev,
       variations: (prev.variations || []).filter((v: ProductVariation) => v.id !== id)
     }));
@@ -102,25 +96,86 @@ export const AdminInventoryScreen = () => {
         stock: 10,
         isActive: true
       };
-      setEditForm(prev => ({
+      setEditForm((prev) => ({
         ...prev,
         variations: [...(prev.variations || []), newVariation]
       }));
       setNewVariationName('');
       setNewVariationValue('');
-      success('Variación añadida');
+      showToast('Variación añadida', 'success');
     }
   };
   
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
+  const { addCategory } = useCategories();
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    try {
+      const slug = newCategoryName.toLowerCase().trim().replace(/\s+/g, '-');
+      await addCategory({
+        name: newCategoryName.trim(),
+        slug,
+        description: `Productos de la categoría ${newCategoryName}`,
+        image: 'https://picsum.photos/seed/category/800/600',
+        order: categories.length + 1,
+        active: true
+      });
+      setEditForm((prev: any) => ({ ...prev, category: newCategoryName.trim() }));
+      setNewCategoryName('');
+      setIsAddingCategory(false);
+      showToast('Categoría creada', 'success');
+    } catch (error) {
+      showToast('Error al crear categoría', 'error');
+    }
+  };
+
+  const handleGenerateVariations = () => {
+    if ((editForm.colors || []).length === 0 && (editForm.sizes || []).length === 0) {
+      showToast('Agrega al menos un color o una talla primero', 'error');
+      return;
+    }
+
+    const colorNames = (editForm.colors || []).map((c: any) => c.name);
+    const sizeNames = editForm.sizes || [];
+    
+    const colorsToUse = colorNames.length > 0 ? colorNames : ['Único'];
+    const sizesToUse = sizeNames.length > 0 ? sizeNames : ['Única'];
+
+    const newVariations: ProductVariation[] = [];
+    
+    colorsToUse.forEach((color: string) => {
+      sizesToUse.forEach((size: string) => {
+        newVariations.push({
+          id: `var_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: `${color} / ${size}`,
+          value: `${color}-${size}`,
+          stock: 10,
+          isActive: true,
+          price: (editForm.price || 0) > 0 ? editForm.price : undefined
+        });
+      });
+    });
+
+    setEditForm((prev: any) => ({
+      ...prev,
+      variations: [...(prev.variations || []), ...newVariations]
+    }));
+    showToast(`${newVariations.length} variaciones generadas`, 'success');
+  };
+
   const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       try {
+        showToast('Comprimiendo imagen...', 'info');
         const base64 = await compressImage(file);
-        setEditForm(prev => ({ ...prev, image: base64 }));
-        success('Imagen subida correctamente');
+        setEditForm((prev) => ({ ...prev, image: base64 }));
+        showToast('Imagen subida correctamente', 'success');
       } catch (error) {
-        showError('Error al subir imagen');
+        showToast('Error al subir imagen', 'error');
       }
     }
   };
@@ -129,23 +184,24 @@ export const AdminInventoryScreen = () => {
     const files = e.target.files;
     if (files && files.length > 0) {
       try {
+        showToast('Comprimiendo imágenes...', 'info');
         const newImages: string[] = [];
         for (let i = 0; i < files.length; i++) {
           const base64 = await compressImage(files[i]);
           newImages.push(base64);
         }
         if (newImages.length > 0) {
-          setEditForm(prev => ({ ...prev, images: [...(prev.images || []), ...newImages] }));
-          success(`${newImages.length} imagen(es) subida(s)`);
+          setEditForm((prev) => ({ ...prev, images: [...(prev.images || []), ...newImages] }));
+          showToast(`${newImages.length} imagen(es) subida(s)`, 'success');
         }
       } catch (error) {
-        showError('Error al subir imágenes');
+        showToast('Error al subir imágenes', 'error');
       }
     }
   };
 
   const handleRemoveGalleryImage = (index: number) => {
-    setEditForm(prev => ({
+    setEditForm((prev) => ({
       ...prev,
       images: (prev.images || []).filter((_: string, i: number) => i !== index)
     }));
@@ -154,22 +210,17 @@ export const AdminInventoryScreen = () => {
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > MAX_VIDEO_SIZE) {
-        showError('El video es muy grande (máx 2MB)');
-        if (videoRef.current) videoRef.current.value = '';
-        return;
-      }
       try {
         const reader = new FileReader();
         reader.onload = () => {
-          setEditForm(prev => ({ ...prev, video: reader.result as string }));
+          setEditForm((prev) => ({ ...prev, video: reader.result as string }));
           if (videoRef.current) videoRef.current.value = '';
-          success('Video subido correctamente');
+          showToast('Video cargado correctamente', 'success');
         };
-        reader.onerror = () => showError('Error al subir video');
+        reader.onerror = () => showToast('Error al leer el archivo de video', 'error');
         reader.readAsDataURL(file);
       } catch (error) {
-        showError('Error al subir video');
+        showToast('Error al procesar el video', 'error');
       }
     }
   };
@@ -214,6 +265,7 @@ export const AdminInventoryScreen = () => {
     setEditingProduct(product);
     setEditForm({
       ...product,
+      hasVariations: product.hasVariations ?? (product.variations && product.variations.length > 0),
       colors: product.colors || [],
       features: product.features || [],
       images: product.images || [],
@@ -229,7 +281,7 @@ export const AdminInventoryScreen = () => {
 
   const handleAddFeature = () => {
     if (newFeatureName.trim() && newFeatureValue.trim()) {
-      setEditForm(prev => ({
+      setEditForm((prev) => ({
         ...prev,
         features: [...(prev.features || []), { name: newFeatureName.trim(), value: newFeatureValue.trim() }]
       }));
@@ -239,15 +291,15 @@ export const AdminInventoryScreen = () => {
   };
 
   const handleRemoveFeature = (index: number) => {
-    setEditForm(prev => ({
+    setEditForm((prev) => ({
       ...prev,
-      features: (prev.features || []).filter((_: { name: string, value: string }, i: number) => i !== index)
+      features: (prev.features || []).filter((_: any, i: number) => i !== index)
     }));
   };
 
   const handleAddColor = () => {
     if (newColorName.trim()) {
-      setEditForm(prev => ({
+      setEditForm((prev) => ({
         ...prev,
         colors: [...(prev.colors || []), { name: newColorName.trim(), hex: newColorHex }]
       }));
@@ -257,15 +309,15 @@ export const AdminInventoryScreen = () => {
   };
 
   const handleRemoveColor = (index: number) => {
-    setEditForm(prev => ({
+    setEditForm((prev) => ({
       ...prev,
-      colors: (prev.colors || []).filter((_: { name: string, hex: string }, i: number) => i !== index)
+      colors: (prev.colors || []).filter((_: any, i: number) => i !== index)
     }));
   };
 
   const handleAddSize = () => {
     if (newSizeName.trim()) {
-      setEditForm(prev => ({
+      setEditForm((prev) => ({
         ...prev,
         sizes: [...(prev.sizes || []), newSizeName.trim()]
       }));
@@ -274,32 +326,40 @@ export const AdminInventoryScreen = () => {
   };
 
   const handleRemoveSize = (index: number) => {
-    setEditForm(prev => ({
+    setEditForm((prev) => ({
       ...prev,
-      sizes: (prev.sizes || []).filter((_: string, i: number) => i !== index)
+      sizes: (prev.sizes || []).filter((_: any, i: number) => i !== index)
     }));
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editingProduct && editForm) {
       try {
         const updatedProduct = {
           ...editingProduct,
           ...editForm,
+          slug: editForm.name ? slugify(editForm.name) : editingProduct.slug,
           image: editForm.image || editForm.images?.[0] || editingProduct.image,
         };
-        updateProduct(editingProduct.id, updatedProduct);
+        await updateProduct(editingProduct.id, updatedProduct);
         setEditingProduct(null);
-        success('Producto actualizado');
+        showToast('Producto actualizado', 'success');
       } catch (error) {
-        showError('Error al guardar');
+        console.error('Error in handleSaveEdit:', error);
+        showToast('Error al guardar', 'error');
       }
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('¿Estás seguro de eliminar este producto?')) {
-      deleteProduct(id);
+      try {
+        await deleteProduct(id);
+        showToast('Producto eliminado', 'success');
+      } catch (error) {
+        console.error('Error in handleDelete:', error);
+        showToast('Error al eliminar', 'error');
+      }
     }
   };
 
@@ -310,29 +370,21 @@ export const AdminInventoryScreen = () => {
   };
 
   return (
-    <div className={`pb-24 lg:pb-10 flex flex-col lg:flex-row min-h-screen ${isDark ? 'bg-zinc-950' : 'bg-zinc-50/50'}`}>
-      <AdminNavigation />
+    <div className={`pb-24 lg:pb-10 flex flex-col min-h-screen ${isDark ? 'bg-zinc-950' : 'bg-zinc-50/50'}`}>
+      <AdminNavigation 
+        title="Inventario" 
+        actions={
+          <button 
+            onClick={() => navigate('/admin/new-product')}
+            className="bg-primary text-white px-4 py-1.5 lg:px-5 lg:py-2 rounded-full text-[10px] lg:text-sm font-black uppercase tracking-widest transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+          >
+            <Plus className="w-3 h-3 lg:w-4 lg:h-4" />
+            <span className="hidden sm:inline">Nuevo Producto</span>
+            <span className="sm:hidden">Nuevo</span>
+          </button>
+        }
+      />
       <div className="flex-1">
-        <header className={`sticky top-0 z-40 backdrop-blur-xl h-14 lg:h-20 flex items-center px-4 lg:px-8 ${
-          isDark ? 'bg-zinc-900/90 border-zinc-800' : 'bg-white/90 border-zinc-100'
-        } border-b`}>
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-3">
-              <h2 className="text-primary text-lg lg:text-2xl font-black tracking-tighter uppercase">
-                INVENTARIO
-              </h2>
-            </div>
-            <button 
-              onClick={() => navigate('/admin/new-product')}
-              className="bg-primary text-white px-4 py-1.5 lg:px-5 lg:py-2 rounded-full text-[10px] lg:text-sm font-black uppercase tracking-widest transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
-            >
-              <Plus className="w-3 h-3 lg:w-4 lg:h-4" />
-              <span className="hidden sm:inline">Nuevo Producto</span>
-              <span className="sm:hidden">Nuevo</span>
-            </button>
-          </div>
-        </header>
-
         <main className="py-3 lg:py-8 px-4 lg:px-8">
             {/* Stats */}
             <div className="grid grid-cols-4 gap-2 mb-6">
@@ -511,13 +563,62 @@ export const AdminInventoryScreen = () => {
                     Editar Producto
                   </h2>
                 </div>
-                <button
-                  onClick={() => setEditingProduct(null)}
-                  className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100'}`}
-                >
-                  <X className={`w-5 h-5 ${isDark ? 'text-zinc-400' : ''}`} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(!showPreview)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                      showPreview 
+                        ? 'bg-primary text-white shadow-lg shadow-primary/20' 
+                        : isDark ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                    }`}
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span className="hidden sm:inline">{showPreview ? 'Ocultar Vista Previa' : 'Vista Previa'}</span>
+                  </button>
+                  <button
+                    onClick={() => setEditingProduct(null)}
+                    className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100'}`}
+                  >
+                    <X className={`w-5 h-5 ${isDark ? 'text-zinc-400' : ''}`} />
+                  </button>
+                </div>
               </div>
+
+              {showPreview && (
+                <div className={`mb-8 p-6 rounded-3xl border animate-fadeIn ${
+                  isDark ? 'bg-zinc-800/50 border-zinc-700' : 'bg-zinc-50 border-zinc-100'
+                }`}>
+                  <div className="flex flex-col items-center">
+                    <p className={`text-[10px] font-black uppercase tracking-widest mb-4 ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>Vista previa en tienda</p>
+                    <div className="w-full max-w-[280px]">
+                      <ProductCard 
+                        product={{
+                          id: editingProduct.id,
+                          name: editForm.name || editingProduct.name,
+                          description: editForm.description || editingProduct.description,
+                          category: editForm.category || editingProduct.category,
+                          price: editForm.price || editingProduct.price,
+                          offerPrice: editForm.offerPrice,
+                          offerEndDate: editForm.offerEndDate,
+                          image: editForm.image || editingProduct.image,
+                          images: editForm.images || editingProduct.images,
+                          video: editForm.video || editingProduct.video,
+                          colors: editForm.colors || editingProduct.colors,
+                          sizes: editForm.sizes || editingProduct.sizes,
+                          features: editForm.features || editingProduct.features,
+                          variations: editForm.variations || editingProduct.variations,
+                          isNew: editForm.isNew ?? editingProduct.isNew,
+                          stock: editForm.stock ?? editingProduct.stock,
+                          rating: editingProduct.rating,
+                          reviews: editingProduct.reviews,
+                          createdAt: editingProduct.createdAt
+                        }} 
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-6">
                 {/* Basic Info */}
@@ -527,26 +628,61 @@ export const AdminInventoryScreen = () => {
                     <input
                       type="text"
                       value={editForm.name || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                      onChange={(e) => setEditForm((prev: any) => ({ ...prev, name: e.target.value }))}
                       className={`w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${
                         isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
                       }`}
                     />
                   </div>
                   <div>
-                    <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Categoría</label>
-                    <select
-                      value={editForm.category || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, category: e.target.value }))}
-                      className={`w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none ${
-                        isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                      }`}
-                    >
-                      <option value="">Seleccionar categoría</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.name}>{cat.name}</option>
-                      ))}
-                    </select>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className={`block text-xs font-black uppercase tracking-wider ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Categoría</label>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingCategory(!isAddingCategory)}
+                        className={`text-[8px] lg:text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg transition-all ${
+                          isAddingCategory 
+                            ? 'bg-red-500/10 text-red-500' 
+                            : 'bg-primary/10 text-primary hover:bg-primary/20'
+                        }`}
+                      >
+                        {isAddingCategory ? 'Cancelar' : '+ Nueva'}
+                      </button>
+                    </div>
+                    
+                    {isAddingCategory ? (
+                      <div className="flex gap-2 animate-fadeIn">
+                        <input 
+                          className={`flex-1 border rounded-xl h-12 px-4 font-bold text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ${
+                            isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
+                          }`}
+                          placeholder="Nombre de la nueva categoría"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCreateCategory}
+                          className="px-4 bg-primary text-white rounded-xl font-bold text-xs hover:bg-primary/90 transition-all"
+                        >
+                          Crear
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        value={editForm.category || ''}
+                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, category: e.target.value }))}
+                        className={`w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none ${
+                          isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
+                        }`}
+                      >
+                        <option value="">Seleccionar categoría</option>
+                        {categories.map(cat => (
+                          <option key={cat.id} value={cat.name}>{cat.name}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
 
@@ -573,7 +709,7 @@ export const AdminInventoryScreen = () => {
                   </div>
                   <textarea
                     value={editForm.description || ''}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) => setEditForm((prev: any) => ({ ...prev, description: e.target.value }))}
                     rows={3}
                     className={`w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none ${
                       isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
@@ -591,7 +727,7 @@ export const AdminInventoryScreen = () => {
                         onChange={(e) => {
                           const rawValue = e.target.value.replace(/\./g, '').replace(',', '.');
                           const numValue = parseFloat(rawValue) || 0;
-                          setEditForm(prev => ({ ...prev, price: numValue }));
+                          setEditForm((prev: any) => ({ ...prev, price: numValue }));
                         }}
                         className={`w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${
                           isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
@@ -606,7 +742,7 @@ export const AdminInventoryScreen = () => {
                         onChange={(e) => {
                           const rawValue = e.target.value.replace(/\./g, '').replace(',', '.');
                           const numValue = parseFloat(rawValue) || 0;
-                          setEditForm(prev => ({ ...prev, offerPrice: numValue }));
+                          setEditForm((prev: any) => ({ ...prev, offerPrice: numValue }));
                         }}
                         className={`w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${
                           isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
@@ -618,7 +754,7 @@ export const AdminInventoryScreen = () => {
                     <input
                       type="number"
                       value={editForm.stock || 0}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, stock: parseInt(e.target.value) || 0 }))}
+                      onChange={(e) => setEditForm((prev: any) => ({ ...prev, stock: parseInt(e.target.value) || 0 }))}
                       className={`w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${
                         isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
                       }`}
@@ -629,7 +765,7 @@ export const AdminInventoryScreen = () => {
                     <input
                       type="text"
                       value={editForm.sku || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, sku: e.target.value }))}
+                      onChange={(e) => setEditForm((prev: any) => ({ ...prev, sku: e.target.value }))}
                       className={`w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${
                         isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
                       }`}
@@ -644,7 +780,7 @@ export const AdminInventoryScreen = () => {
                     <input
                       type="text"
                       value={editForm.brand || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, brand: e.target.value }))}
+                      onChange={(e) => setEditForm((prev: any) => ({ ...prev, brand: e.target.value }))}
                       className={`w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${
                         isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
                       }`}
@@ -655,7 +791,7 @@ export const AdminInventoryScreen = () => {
                     <input
                       type="text"
                       value={editForm.material || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, material: e.target.value }))}
+                      onChange={(e) => setEditForm((prev: any) => ({ ...prev, material: e.target.value }))}
                       className={`w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${
                         isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
                       }`}
@@ -666,7 +802,7 @@ export const AdminInventoryScreen = () => {
                     <input
                       type="text"
                       value={editForm.weight || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, weight: e.target.value }))}
+                      onChange={(e) => setEditForm((prev: any) => ({ ...prev, weight: e.target.value }))}
                       className={`w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${
                         isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
                       }`}
@@ -677,7 +813,7 @@ export const AdminInventoryScreen = () => {
                     <input
                       type="text"
                       value={editForm.dimensions || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, dimensions: e.target.value }))}
+                      onChange={(e) => setEditForm((prev: any) => ({ ...prev, dimensions: e.target.value }))}
                       className={`w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${
                         isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
                       }`}
@@ -708,7 +844,7 @@ export const AdminInventoryScreen = () => {
                           <span
                             onClick={(e) => {
                               e.stopPropagation();
-                              setEditForm(prev => ({ ...prev, image: '' }));
+                              setEditForm((prev: any) => ({ ...prev, image: '' }));
                             }}
                             className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-red-600 transition-colors cursor-pointer"
                           >
@@ -777,7 +913,7 @@ export const AdminInventoryScreen = () => {
                       </div>
                       <button
                         type="button"
-                        onClick={() => setEditForm(prev => ({ ...prev, video: '' }))}
+                        onClick={() => setEditForm((prev: any) => ({ ...prev, video: '' }))}
                         className={`w-full py-2 rounded-xl text-xs font-bold transition-colors ${
                           isDark ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50' : 'bg-red-50 text-red-500 hover:bg-red-100'
                         }`}
@@ -797,122 +933,6 @@ export const AdminInventoryScreen = () => {
                       <span className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Subir Video (máx 2MB)</span>
                     </button>
                   )}
-                </div>
-
-                {/* Colores */}
-                <div>
-                  <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Colores</label>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {(editForm.colors || []).map((color: { name: string; hex: string }, i: number) => (
-                      <div 
-                        key={i}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border group hover:border-primary transition-all ${
-                          isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-50 border-zinc-100'
-                        }`}
-                      >
-                        <div 
-                          className="w-5 h-5 rounded-full border border-zinc-300" 
-                          style={{ backgroundColor: color.hex }}
-                        />
-                        <span className={`text-xs font-bold ${isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>{color.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveColor(i)}
-                          className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
-                            isDark ? 'bg-zinc-700 text-zinc-400 hover:bg-red-900 hover:text-red-400' : 'bg-zinc-100 text-zinc-400 hover:bg-red-100 hover:text-red-500'
-                          }`}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <input
-                      type="text"
-                      value={newColorName}
-                      onChange={(e) => setNewColorName(e.target.value)}
-                      placeholder="Nombre del color"
-                      className={`px-3 py-2 rounded-lg border text-xs font-medium focus:outline-none focus:border-primary w-32 ${
-                        isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                      }`}
-                    />
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={newColorHex}
-                        onChange={(e) => setNewColorHex(e.target.value)}
-                        className="w-10 h-10 rounded-lg cursor-pointer border border-zinc-200"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddColor}
-                        className="px-3 py-2 bg-primary text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors"
-                      >
-                        Agregar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tallas */}
-                <div>
-                  <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Tallas</label>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {(editForm.sizes || []).map((size: string, i: number) => (
-                      <div 
-                        key={i}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl border group hover:border-primary transition-all ${
-                          isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-50 border-zinc-100'
-                        }`}
-                      >
-                        <span className={`text-xs font-bold ${isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>{size}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSize(i)}
-                          className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
-                            isDark ? 'bg-zinc-700 text-zinc-400 hover:bg-red-900 hover:text-red-400' : 'bg-zinc-100 text-zinc-400 hover:bg-red-100 hover:text-red-500'
-                          }`}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newSizeName}
-                      onChange={(e) => setNewSizeName(e.target.value)}
-                      placeholder="Ej. 45, XL, M"
-                      className={`px-3 py-2 rounded-lg border text-xs font-medium focus:outline-none focus:border-primary w-32 ${
-                        isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddSize}
-                      className="px-3 py-2 bg-primary text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors"
-                    >
-                      Agregar
-                    </button>
-                  </div>
-                </div>
-
-                {/* Tipo Guía de Tallas */}
-                <div>
-                  <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Tipo de Guía de Tallas</label>
-                  <select
-                    value={editForm.sizeGuideType || 'shoes'}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, sizeGuideType: e.target.value as 'shoes' | 'clothing' | 'accessories' }))}
-                    className={`w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none ${
-                      isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                    }`}
-                  >
-                    <option value="shoes">Zapatos</option>
-                    <option value="clothing">Ropa</option>
-                    <option value="accessories">Accesorios</option>
-                  </select>
                 </div>
 
                 {/* Características del Producto */}
@@ -982,12 +1002,168 @@ export const AdminInventoryScreen = () => {
                   </div>
                 </div>
 
+                {/* Variations Toggle */}
+                <div className={`p-4 rounded-2xl border ${isDark ? 'bg-zinc-800/50 border-zinc-700' : 'bg-zinc-50 border-zinc-100'}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Palette className="w-5 h-5 text-primary" />
+                      <div>
+                        <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-zinc-900'}`}>Variaciones</h3>
+                        <p className={`text-[10px] font-medium ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>¿Este producto tiene diferentes tallas o colores?</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditForm(prev => ({ ...prev, hasVariations: !prev.hasVariations }))}
+                      className={`relative w-12 h-7 rounded-full transition-all ${
+                        editForm.hasVariations ? 'bg-primary' : isDark ? 'bg-zinc-700' : 'bg-zinc-300'
+                      }`}
+                    >
+                      <span 
+                        className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-all ${
+                          editForm.hasVariations ? 'left-6' : 'left-1'
+                        }`} 
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {editForm.hasVariations && (
+                  <div className="space-y-6 animate-fadeIn">
+                    {/* Colores */}
+                    <div>
+                      <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Colores</label>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {(editForm.colors || []).map((color: { name: string; hex: string }, i: number) => (
+                          <div 
+                            key={i}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl border group hover:border-primary transition-all ${
+                              isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-50 border-zinc-100'
+                            }`}
+                          >
+                            <div 
+                              className="w-5 h-5 rounded-full border border-zinc-300" 
+                              style={{ backgroundColor: color.hex }}
+                            />
+                            <span className={`text-xs font-bold ${isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>{color.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveColor(i)}
+                              className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                                isDark ? 'bg-zinc-700 text-zinc-400 hover:bg-red-900 hover:text-red-400' : 'bg-zinc-100 text-zinc-400 hover:bg-red-100 hover:text-red-500'
+                              }`}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <input
+                          type="text"
+                          value={newColorName}
+                          onChange={(e) => setNewColorName(e.target.value)}
+                          placeholder="Nombre del color"
+                          className={`px-3 py-2 rounded-lg border text-xs font-medium focus:outline-none focus:border-primary w-32 ${
+                            isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
+                          }`}
+                        />
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={newColorHex}
+                            onChange={(e) => setNewColorHex(e.target.value)}
+                            className="w-10 h-10 rounded-lg cursor-pointer border border-zinc-200"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddColor}
+                            className="px-3 py-2 bg-primary text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors"
+                          >
+                            Agregar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                {/* Tallas */}
+                <div>
+                  <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Tallas</label>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {(editForm.sizes || []).map((size: string, i: number) => (
+                      <div 
+                        key={i}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl border group hover:border-primary transition-all ${
+                          isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-50 border-zinc-100'
+                        }`}
+                      >
+                        <span className={`text-xs font-bold ${isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>{size}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSize(i)}
+                          className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                            isDark ? 'bg-zinc-700 text-zinc-400 hover:bg-red-900 hover:text-red-400' : 'bg-zinc-100 text-zinc-400 hover:bg-red-100 hover:text-red-500'
+                          }`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newSizeName}
+                      onChange={(e) => setNewSizeName(e.target.value)}
+                      placeholder="Ej. 45, XL, M"
+                      className={`px-3 py-2 rounded-lg border text-xs font-medium focus:outline-none focus:border-primary w-32 ${
+                        isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddSize}
+                      className="px-3 py-2 bg-primary text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors"
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tipo Guía de Tallas */}
+                <div>
+                  <label className={`block text-xs font-black uppercase tracking-wider mb-2 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Tipo de Guía de Tallas</label>
+                  <select
+                    value={editForm.sizeGuideType || 'shoes'}
+                    onChange={(e) => setEditForm((prev: any) => ({ ...prev, sizeGuideType: e.target.value as 'shoes' | 'clothing' | 'accessories' }))}
+                    className={`w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none ${
+                      isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
+                    }`}
+                  >
+                    <option value="shoes">Zapatos</option>
+                    <option value="clothing">Ropa</option>
+                    <option value="accessories">Accesorios</option>
+                  </select>
+                </div>
+
                 {/* Variations Table */}
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <label className={`block text-xs font-black uppercase tracking-wider ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
                       Variaciones ({editForm.variations?.length || 0})
                     </label>
+                    <button
+                      type="button"
+                      onClick={handleGenerateVariations}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                        isDark 
+                          ? 'bg-primary/20 text-primary hover:bg-primary/30' 
+                          : 'bg-primary/10 text-primary hover:bg-primary/20'
+                      }`}
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Generar Combinaciones</span>
+                    </button>
                   </div>
                   
                   {/* Add Variation Form */}
@@ -1062,7 +1238,7 @@ export const AdminInventoryScreen = () => {
                               value={variation.price ? formatPriceCOP(variation.price) : ''}
                               onChange={(e) => {
                                 const rawValue = e.target.value.replace(/\./g, '').replace(',', '.');
-                                const numValue = parseFloat(rawValue) || 0;
+                                const numValue = parseFloat(rawValue) || undefined;
                                 handleUpdateVariation(variation.id, 'price', numValue);
                               }}
                               className={`w-20 px-2 py-1 border rounded-lg text-xs ${
@@ -1073,22 +1249,24 @@ export const AdminInventoryScreen = () => {
                             <button
                               type="button"
                               onClick={() => handleRemoveVariation(variation.id)}
-                              className={`p-1.5 rounded-lg hover:bg-red-100 ${isDark ? 'text-zinc-500 hover:text-red-400' : 'text-zinc-400 hover:text-red-500'}`}
+                              className={`p-1.5 rounded-lg hover:bg-red-100 transition-colors ${isDark ? 'text-zinc-500 hover:text-red-400' : 'text-zinc-400 hover:text-red-500'}`}
                             >
-                              <X className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className={`text-center py-4 rounded-xl ${isDark ? 'bg-zinc-800/50' : 'bg-zinc-50'}`}>
+                    <div className={`text-center py-6 rounded-xl ${isDark ? 'bg-zinc-800/50' : 'bg-zinc-50'}`}>
                       <p className={`text-xs ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
                         Añade variaciones como Modelo, Peso, Talla, etc.
                       </p>
                     </div>
                   )}
                 </div>
+              </div>
+            )}
 
                 {/* Badges */}
                 <div className="flex flex-wrap gap-4">
