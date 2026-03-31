@@ -100,7 +100,7 @@ export const Header = () => {
   const navItems = [
     { id: 'home', label: 'Inicio', path: '/' },
     { id: 'products', label: 'Productos', path: '/products' },
-    { id: 'categories', label: 'Categoras', path: '/categories' },
+    { id: 'categories', label: 'Categorías', path: '/categories' },
     { id: 'offers', label: 'Ofertas', path: '/offers' }
   ];
 
@@ -122,7 +122,6 @@ export const Header = () => {
             : "bg-transparent py-6"
         )}
       >
-        {/* Free Shipping Progress Bar */}
         {totalItems > 0 && (
           <div className="absolute top-0 left-0 right-0 h-1 bg-zinc-100/20 dark:bg-zinc-900/20 overflow-hidden">
             <motion.div 
@@ -180,7 +179,6 @@ export const Header = () => {
                 className="w-10 h-10 xl:w-12 xl:h-12 rounded-full flex items-center justify-center text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all group relative"
               >
                 <Search className="w-5 h-5 xl:w-6 xl:h-6" />
-                <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-zinc-900 text-white text-[8px] font-bold px-3 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap pointer-events-none translate-y-2 group-hover:translate-y-0">Buscar /</span>
               </button>
 
               <button 
@@ -242,7 +240,6 @@ export const Header = () => {
         </div>
       </header>
 
-      {/* Search Overlay */}
       <AnimatePresence>
         {isSearchOpen && (
           <div className="fixed inset-0 z-[100] flex flex-col">
@@ -283,7 +280,8 @@ export const Header = () => {
                       >
                         <X className="w-4 h-4" />
                       </button>
-                  )}
+                    )}
+                  </form>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-10">
@@ -363,11 +361,6 @@ export const Header = () => {
                               <h5 className="text-sm font-bold text-zinc-900 dark:text-white leading-tight line-clamp-2">{prod.name}</h5>
                               <p className="text-sm font-bold text-zinc-900 dark:text-white mt-1">${formatCOP(prod.price)}</p>
                             </div>
-                            {prod.originalPrice && prod.originalPrice > prod.price && (
-                              <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">
-                                -{Math.round((1 - prod.price / prod.originalPrice) * 100)}%
-                              </span>
-                            )}
                           </Link>
                         ))
                       ) : searchQuery.length > 1 ? (
@@ -376,15 +369,6 @@ export const Header = () => {
                             <Search className="w-8 h-8 text-zinc-300" />
                           </div>
                           <p className="text-zinc-400 font-bold">No se encontraron resultados para "{searchQuery}"</p>
-                          <button 
-                            onClick={() => {
-                              navigate('/products');
-                              setIsSearchOpen(false);
-                            }}
-                            className="mt-4 text-primary font-bold text-sm uppercase tracking-wider hover:underline"
-                          >
-                            Ver todos los productos
-                          </button>
                         </div>
                       ) : (
                         <div className="col-span-2 md:col-span-3 py-12 text-center border-2 border-dashed border-zinc-100 dark:border-zinc-800 rounded-2xl">
@@ -393,21 +377,6 @@ export const Header = () => {
                         </div>
                       )}
                     </div>
-
-                    {searchResults.length > 6 && (
-                      <div className="text-center pt-4">
-                        <button 
-                          onClick={() => {
-                            navigate(`/products?search=${encodeURIComponent(searchQuery)}`);
-                            setIsSearchOpen(false);
-                          }}
-                          className="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-full text-sm font-bold uppercase tracking-wider hover:bg-primary transition-all"
-                        >
-                          Ver todos los {searchResults.length} resultados
-                          <ArrowRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -416,7 +385,6 @@ export const Header = () => {
         )}
       </AnimatePresence>
 
-      {/* Mobile Menu */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <div className="fixed inset-0 z-[60] flex flex-col">
@@ -466,9 +434,6 @@ export const Header = () => {
                     <ArrowRight className={cn("w-5 h-5 transition-transform", isActive(item) ? "translate-x-0 opacity-100" : "-translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100")} />
                   </Link>
                 ))}
-
-                <div className="pt-8 pb-4">
-                </div>
               </div>
 
               <div className="p-6 border-t border-zinc-100 dark:border-zinc-900 space-y-6 bg-zinc-50/50 dark:bg-zinc-900/30">
@@ -477,7 +442,7 @@ export const Header = () => {
                   className="w-full h-12 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-widest text-zinc-900 dark:text-white shadow-sm"
                 >
                   {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                  Modo {theme === 'light' ? 'Noche' : 'Da'}
+                  Modo {theme === 'light' ? 'Noche' : 'Día'}
                 </button>
                 
                 <div className="flex justify-center gap-6">
@@ -487,7 +452,7 @@ export const Header = () => {
                 </div>
 
                 <p className="text-center text-[8px] font-black uppercase tracking-[0.4em] text-zinc-300 dark:text-zinc-700">
-                  {config.name}  {new Date().getFullYear()}
+                  {config.name} © {new Date().getFullYear()}
                 </p>
               </div>
             </motion.div>
