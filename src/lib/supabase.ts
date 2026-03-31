@@ -1,12 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Credentials hardcodeadas para producción
-const SUPABASE_URL = 'https://mfrgvkrhrzxmuuadprrx.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mcmd2a3Jocnp4bXV1YWRwcnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1ODMzMDcsImV4cCI6MjA5MDE1OTMwN30.RFog6BanjMbvqCMsT4nFgve3a7JKVnC24jwFHg4XDJw';
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-  },
-});
+export const supabase = createClient(
+  'https://mfrgvkrhrzxmuuadprrx.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mcmd2a3Jocnp4bXV1YWRwcnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1ODMzMDcsImV4cCI6MjA5MDE1OTMwN30.RFog6BanjMbvqCMsT4nFgve3a7JKVnC24jwFHg4XDJw'
+);
